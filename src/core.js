@@ -309,6 +309,64 @@
     var hecho = MACROS.every(function (m) { return num(meta[m]) - num(total[m]) <= margen(num(meta[m])); });
     return { sobra: sobra, hecho: hecho };
   }
+  /* ── Historial: otros días, días cumplidos y racha ───────────────── */
+  /** 'AAAA-MM-DD' → fecha local a mediodía (así un cambio de hora no la mueve de día). */
+  function fechaDe(clave) { var p = String(clave).split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12); }
+  /** La clave del día que cae `n` días después (o antes, con n negativo). */
+  function otroDia(clave, n) { var d = fechaDe(clave); d.setDate(d.getDate() + n); return claveDia(d); }
+  /** Las claves de los últimos `n` días, acabando en `hoy`. */
+  function ultimosDias(hoy, n) { var out = []; for (var i = n - 1; i >= 0; i--) out.push(otroDia(hoy, -i)); return out; }
+  /** Las claves de un mes (mesN de 1 a 12) y los huecos antes de su día 1, con la semana empezando en lunes. */
+  function diasDelMes(anio, mesN) {
+    var n = new Date(anio, mesN, 0).getDate(), claves = [];
+    for (var d = 1; d <= n; d++) claves.push(anio + '-' + dos(mesN) + '-' + dos(d));
+    return { claves: claves, huecos: (new Date(anio, mesN - 1, 1).getDay() + 6) % 7 };
+  }
+  /**
+   * Cómo fue un día frente a su objetivo: 'sin' (nada apuntado), 'cumplido' (los tres macros entre el 90 % y el 110 %),
+   * 'medias' (hay algo apuntado, pero no llega o se pasa) o 'apuntado' (hay comidas, pero ese día no tenía objetivo).
+   */
+  function cumple(meta, comidas) {
+    if (!comidas || !comidas.length) return 'sin';
+    if (!meta) return 'apuntado';
+    var t = sumaDia(comidas);
+    return MACROS.every(function (m) { var o = num(meta[m]), v = num(t[m]); return o > 0 ? v >= 0.9 * o && v <= 1.1 * o : v <= 2; }) ? 'cumplido' : 'medias';
+  }
+  /**
+   * El estado de cada día de una lista de claves (una semana, un mes) y la cuenta de cumplidos, a medias y sin apuntar.
+   * dias {clave: comidas}; metas {clave: objetivo de ese día}; porDefecto: el objetivo de ahora, para los días que no
+   * guardaron el suyo. Además de los de `cumple`: 'futuro', 'antes' (anterior al primer día apuntado: no cuenta como
+   * «sin apuntar») y 'hoy' (hoy mientras no esté cumplido: sigue en marcha y tampoco cuenta).
+   */
+  function calendario(dias, metas, claves, hoy, porDefecto) {
+    dias = dias || {}; metas = metas || {};
+    var primero = Object.keys(dias).filter(function (k) { return dias[k] && dias[k].length; }).sort()[0];
+    var cuenta = { cumplido: 0, medias: 0, sin: 0, apuntado: 0 };
+    var out = claves.map(function (k) {
+      var e;
+      if (k > hoy) e = 'futuro';
+      else if (!primero || k < primero) e = k === hoy ? 'hoy' : 'antes';
+      else { e = cumple(metas[k] || porDefecto || null, dias[k]); if (k === hoy && e !== 'cumplido') e = 'hoy'; }
+      if (cuenta[e] != null) cuenta[e]++;
+      return { k: k, estado: e };
+    });
+    return { dias: out, cuenta: cuenta };
+  }
+  /** Días cumplidos seguidos hasta hoy (si hoy aún no lo está, hasta ayer) y la mejor racha que hay guardada. */
+  function racha(dias, metas, hoy, porDefecto) {
+    dias = dias || {}; metas = metas || {};
+    var ok = function (k) { return cumple(metas[k] || porDefecto || null, dias[k]) === 'cumplido'; };
+    var actual = 0, k = ok(hoy) ? hoy : otroDia(hoy, -1);
+    while (ok(k)) { actual++; k = otroDia(k, -1); }
+    var mejor = 0, seguidos = 0, previo = null;
+    Object.keys(dias).sort().forEach(function (d) {
+      if (d > hoy) return;
+      if (!ok(d)) { seguidos = 0; previo = null; return; }
+      seguidos = previo && otroDia(previo, 1) === d ? seguidos + 1 : 1; previo = d;
+      if (seguidos > mejor) mejor = seguidos;
+    });
+    return { actual: actual, mejor: Math.max(mejor, actual) };
+  }
   /** Se queda con los `max` días más recientes. */
   function podarDias(dias, max) {
     var out = {};
@@ -429,7 +487,7 @@
   var Core = {
     KCAL: KCAL, num: num, macros: macros, totales: totales, reparto: reparto, redondear: redondear, resolver: resolver,
     esAcompanamiento: esAcompanamiento, fijados: fijados, masAporta: masAporta, sugerir: sugerir, objetivos: objetivos, porComida: porComida, norm: norm, buscar: buscar, proteinaPorCaloria: proteinaPorCaloria, fmt: fmt,
-    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, podarDias: podarDias
+    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, fechaDe: fechaDe, otroDia: otroDia, ultimosDias: ultimosDias, diasDelMes: diasDelMes, cumple: cumple, calendario: calendario, racha: racha, podarDias: podarDias
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core; else root.Core = Core;
 })(typeof self !== 'undefined' ? self : this);

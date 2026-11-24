@@ -22,6 +22,7 @@
   --g: #1BAF7A;               /* grasa */
   --plato-luz: #FFFFFF; --plato: #F4F6F9; --hondo-a: #E9EDF2; --hondo-b: #FCFDFE; --pista: #DFE5EC; --plato-filo: rgb(255 255 255 / .9);
   --aviso-fondo: #FFF3D1; --aviso-tinta: #6B4700;
+  --medias: #E3A008;          /* un día a medias */
   --sombra: 16 24 40;
   --titulo: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
   --texto: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -96,7 +97,35 @@ h1, h2, h3, p { margin: 0; }
 .dia-kcal { display: block; }
 .dia-macros { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 5px; font-variant-numeric: tabular-nums; }
 .dia-macros .m { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.cima-fecha { font-size: 13.5px; font-weight: 600; color: var(--cima-tinta-2); }
+.cima-fecha { font-size: 13.5px; font-weight: 600; color: var(--cima-tinta-2); display: inline-flex; align-items: baseline; gap: 5px; padding: 6px 0 6px 8px; }
+.cima-fecha small { font-size: 11px; }
+/* Otros días: la tira de la semana y el mes. La marca de cada día: llena = cumplido, aro ámbar = a medias, aro gris = sin apuntar. */
+.semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 12px; }
+.sem-d { display: grid; justify-items: center; gap: 5px; padding: 7px 0 8px; border-radius: 16px; font-size: 11.5px; font-weight: 700; color: var(--cima-tinta-2); }
+.sem-d[aria-current="true"] { background: var(--hoja); color: var(--tinta); box-shadow: 0 2px 10px rgb(var(--sombra) / .12); }
+.marca { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; position: relative; font: 700 12.5px/1 var(--texto); font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+.marca span { position: relative; }
+.marca.ok { background: var(--tinta); color: var(--hoja); }
+.marca.med { box-shadow: inset 0 0 0 2.5px var(--medias); color: var(--tinta); }
+.marca.apu { box-shadow: inset 0 0 0 2.5px var(--tinta-3); color: var(--tinta); }
+.marca.sin { box-shadow: inset 0 0 0 1.5px var(--tinta-3); color: var(--tinta-3); }
+.marca.fut { color: var(--tinta-3); opacity: .55; }
+.marca.ya { color: var(--tinta); }      /* hoy: un aro que se va llenando con lo que lleva (hueco por dentro, vale sobre cualquier fondo) */
+.marca.ya::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--tinta) 0 var(--v, 0%), var(--pista) var(--v, 0%));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
+.junto { white-space: nowrap; }
+.mes-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -2px; }
+.mes-nav p { font-size: 13.5px; color: var(--tinta-2); text-align: center; }
+.mes-nav button { width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--hundido); font-size: 20px; line-height: 1; } .mes-nav button:disabled { opacity: .35; }
+.mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px 2px; justify-items: center; margin: 12px 0 4px; }
+.mes small { font-size: 11.5px; font-weight: 700; color: var(--tinta-3); padding-bottom: 2px; }
+.mes-d { border-radius: 50%; } .mes-d .marca { width: 34px; height: 34px; font-size: 13.5px; }
+.mes-d[aria-current="true"] .marca { outline: 2.5px solid var(--tinta); outline-offset: 2px; }
+.mes-ley { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 14px; }
+.mes-ley div { background: var(--hundido); border-radius: 16px; padding: 10px 12px; font-size: 12.5px; font-weight: 600; color: var(--tinta-2); }
+.mes-ley b { display: block; font: 700 22px/1.1 var(--titulo); color: var(--tinta); margin-bottom: 3px; }
+.mes-ley .marca { display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; }
+.racha { margin-top: 10px; background: var(--accion); color: var(--accion-tinta); border-radius: 16px; padding: 12px 14px; font-size: 14px; font-weight: 600; }
 
 /* ── Hoja de contenido ───────────────────────────── */
 .hoja { flex: 1 0 auto; background: var(--hoja); border-radius: 28px 28px 0 0; padding: 16px 16px 60px; box-shadow: 0 -8px 30px rgb(var(--sombra) / .1); }
@@ -252,9 +281,9 @@ h3.rotulo { display: block; margin-top: 8px; }
 .meta-kcal small { font: 600 12px var(--texto); opacity: .7; margin-left: 3px; }
 .meta-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .meta-macros .punto { width: 8px; height: 8px; }
-.meta .marca { position: absolute; top: -7px; right: -5px; width: 24px; height: 24px; border-radius: 50%; background: var(--hoja); color: var(--tinta); display: none; place-items: center; box-shadow: 0 0 0 2px var(--accion), 0 3px 8px rgb(var(--sombra) / .25); }
-.meta[aria-pressed="true"] .marca { display: grid; }
-.meta .marca .ico { width: 14px; height: 14px; stroke-width: 3; }
+.meta-ok { position: absolute; top: -7px; right: -5px; width: 24px; height: 24px; border-radius: 50%; background: var(--hoja); color: var(--tinta); display: none; place-items: center; box-shadow: 0 0 0 2px var(--accion), 0 3px 8px rgb(var(--sombra) / .25); }
+.meta[aria-pressed="true"] .meta-ok { display: grid; }
+.meta-ok .ico { width: 14px; height: 14px; stroke-width: 3; }
 .aviso { background: var(--aviso-fondo); color: var(--aviso-tinta); border-radius: 16px; padding: 12px 14px; font-size: 13.5px; margin-top: 12px; }
 .linea-dato { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--hundido); border-radius: 16px; padding: 10px 10px 10px 14px; margin-top: 12px; }
 .linea-dato b { display: block; } .linea-dato small { color: var(--tinta-2); font-size: 13px; font-variant-numeric: tabular-nums; }

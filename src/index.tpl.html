@@ -91,7 +91,9 @@
 
     <section class="pantalla" id="p-hoy" aria-label="Hoy">
       <header class="cima">
-        <div class="cima-fila"><h1>Hoy</h1><span class="cima-fecha" id="hoy-fecha"></span></div>
+        <div class="cima-fila"><h1 id="hoy-titulo">Hoy</h1><button class="cima-fecha" id="hoy-fecha" data-a="mes" aria-label="Ver el mes"></button></div>
+        <div class="semana" id="hoy-semana"></div>
+        <p class="dia" id="hoy-sem-txt" hidden></p>
         <div class="resumen">
           <div class="plato">
             <svg viewBox="0 0 160 160" aria-hidden="true">

@@ -41,12 +41,15 @@
     plato: { items: [], modo: 'macros', objetivo: null, ejemplo: false },
     perfil: { sexo: 'h', edad: 30, peso: 75, altura: 178, nivel: 3, ejemplo: true },
     meta: { modo: 'calc', tipo: null, comidas: 4, mano: { p: null, h: null, g: null } },
-    favs: [], propios: [], platos: [], dias: {}
+    favs: [], propios: [], platos: [], dias: {}, metas: {}, pesos: []
   });
   let S = inicial();
   try { const t = localStorage.getItem(CLAVE); if (t) S = Object.assign(inicial(), JSON.parse(t)); } catch (e) { /* sin memoria: se usa igual */ }
   if (['auto', 'claro', 'oscuro'].indexOf(S.aspecto) < 0) S.aspecto = 'auto';   // p. ej. el antiguo «color»
-  S.dias = C.podarDias(S.dias && typeof S.dias === 'object' ? S.dias : {}, 35);  // lo apuntado cada día (se guardan 5 semanas)
+  S.dias = C.podarDias(S.dias && typeof S.dias === 'object' ? S.dias : {}, 400);  // lo apuntado cada día (se guarda algo más de un año)
+  S.metas = S.metas && typeof S.metas === 'object' ? S.metas : {};                 // el objetivo que tenía cada día
+  Object.keys(S.metas).forEach((k) => { if (!S.dias[k]) delete S.metas[k]; });
+  S.pesos = Array.isArray(S.pesos) ? S.pesos : [];                                 // el peso apuntado: [{ f: 'AAAA-MM-DD', kg }]
   let tGuardar = 0;
   const guardaYa = () => { clearTimeout(tGuardar); tGuardar = 0; try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) { /* nada */ } };
   const guardar = () => { clearTimeout(tGuardar); tGuardar = setTimeout(guardaYa, 250); };
@@ -490,6 +493,51 @@
   /* ── Pantalla: Hoy (lo que llevas apuntado) ────── */
   const claveHoy = () => C.claveDia(new Date());
   const comidasHoy = () => S.dias[claveHoy()] || [];
+  /* Otros días: «Hoy» puede enseñar cualquier día ya pasado (la tira de la semana y el mes llevan hasta él). */
+  let diaVisto = null;                          // el día que se está viendo; null = hoy (no se guarda)
+  const claveVista = () => (diaVisto && diaVisto < claveHoy() ? diaVisto : claveHoy());
+  const comidasDe = (k) => S.dias[k] || [];
+  const metaDe = (k) => S.metas[k] || metaDia();                       // el objetivo que tenía ese día; si no lo guardó, el de ahora
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], LETRAS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+  const capital = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const CLASE_DIA = { cumplido: 'ok', medias: 'med', sin: 'sin', apuntado: 'apu', futuro: 'fut', antes: 'fut', hoy: 'ya' };
+  const DICE_DIA = { cumplido: 'cumplido', medias: 'a medias', sin: 'sin apuntar', apuntado: 'apuntado', futuro: 'aún no ha llegado', antes: 'sin apuntar', hoy: 'en marcha' };
+  /** Guarda con el día el objetivo que tenía, para que el historial lo mida con lo que tocaba entonces. */
+  function ponMeta(k, md) {
+    const a = S.metas[k];
+    if (!a || a.kcal !== md.kcal || a.p !== md.p || a.h !== md.h || a.g !== md.g) { S.metas[k] = { kcal: md.kcal, p: md.p, h: md.h, g: md.g }; guardar(); }
+  }
+  /** Un día de la tira o del mes: su marca redonda (llena si cumplió, aro ámbar a medias, aro gris sin apuntar; hoy, lo que lleva). */
+  function htmlDia(d, visto, enTira) {
+    const f = C.fechaDe(d.k);
+    let v = '';
+    if (d.estado === 'hoy') { const md = metaDia(), t = C.sumaDia(comidasHoy()); v = ` style="--v:${md && md.kcal ? Math.round(Math.min(1, t.kcal / md.kcal) * 100) : (t.kcal ? 50 : 0)}%"`; }
+    return `<button class="${enTira ? 'sem-d' : 'mes-d'}" data-a="ver-dia" data-k="${d.k}" aria-current="${d.k === visto}" aria-label="${SEMANA[f.getDay()]} ${f.getDate()}: ${DICE_DIA[d.estado]}"${d.estado === 'futuro' ? ' disabled' : ''}>${enTira ? LETRAS[f.getDay()] : ''}<span class="marca ${CLASE_DIA[d.estado]}"${v}><span>${f.getDate()}</span></span></button>`;
+  }
+  /** «Últimos 7 días: 3 cumplidos, 2 a medias y 1 sin apuntar.» Sin objetivo del día, solo cuántos se apuntaron. */
+  function fraseSemana(c) {
+    const n = (k, uno, varios) => `${k} ${k === 1 ? uno : varios}`;
+    const p = (metaDia() || c.cumplido + c.medias ? [c.cumplido + c.medias + c.sin ? `<b>${n(c.cumplido, 'cumplido', 'cumplidos')}</b>` : '', c.medias ? `${c.medias} a medias` : '']
+      : [c.apuntado ? `<b>${n(c.apuntado, 'apuntado', 'apuntados')}</b>` : '']).concat([c.sin ? `${c.sin} sin apuntar` : '']).filter(Boolean);
+    return p.length ? `Últimos 7 días: ${p.length > 1 ? p.slice(0, -1).join(', ') + ' y ' + p[p.length - 1] : p[0]}.` : '';
+  }
+  /** El mes de un vistazo: cada día con su marca, la cuenta y la racha. */
+  function htmlMes(a, m) {
+    const hoy = claveHoy(), md = metaDia(), dm = C.diasDelMes(a, m), cal = C.calendario(S.dias, S.metas, dm.claves, hoy, md), c = cal.cuenta;
+    const con = Object.keys(S.dias).filter((k) => S.dias[k].length).sort(), primero = (con[0] || hoy).slice(0, 7), este = dm.claves[0].slice(0, 7);
+    const ir = (d) => { const x = new Date(a, m - 1 + d, 1); return x.getFullYear() + '-' + (x.getMonth() + 1); };
+    const ley = (n, clase, t) => `<div><b>${n}</b> <span class="marca ${clase}"></span>${t}</div>`;
+    const r = md ? C.racha(S.dias, S.metas, hoy, md) : null;
+    const racha = !r || (!r.actual && !r.mejor) ? '' : `<div class="racha">${r.actual > 1 ? `Llevas <b>${r.actual} días seguidos</b> cumpliendo.` : r.actual === 1 ? 'Llevas <b>1 día</b> cumpliendo.' : 'Ahora no llevas racha.'}${r.mejor > r.actual ? ` Tu mejor racha: ${r.mejor} días.` : ''}</div>`;
+    const cuenta = (md || c.cumplido + c.medias ? [ley(c.cumplido, 'ok', c.cumplido === 1 ? 'cumplido' : 'cumplidos'), ley(c.medias, 'med', 'a medias')] : [ley(c.apuntado, 'apu', c.apuntado === 1 ? 'apuntado' : 'apuntados')]).concat([ley(c.sin, 'sin', 'sin apuntar')]);
+    return { titulo: capital(MESES[m - 1]) + (a !== +hoy.slice(0, 4) ? ' ' + a : ''),
+      cuerpo: `<div class="mes-nav"><button data-a="mes-ir" data-d="-1" data-v="${ir(-1)}" aria-label="Mes anterior"${este <= primero ? ' disabled' : ''}>‹</button><p>Toca un día para ver lo que comiste.</p><button data-a="mes-ir" data-d="1" data-v="${ir(1)}" aria-label="Mes siguiente"${este >= hoy.slice(0, 7) ? ' disabled' : ''}>›</button></div>
+        <div class="mes">${'LMXJVSD'.split('').map((l) => `<small>${l}</small>`).join('')}${'<span></span>'.repeat(dm.huecos)}${cal.dias.map((d) => htmlDia(d, claveVista(), false)).join('')}</div>
+        <div class="mes-ley">${cuenta.join(' ')}</div>${racha}` };
+  }
+  function abreMes() { const f = C.fechaDe(claveVista()), x = htmlMes(f.getFullYear(), f.getMonth() + 1); abre(h2(x.titulo), `<div id="mes-cuerpo">${x.cuerpo}</div>`); }
+  function pintaMes(a, m) { const x = htmlMes(a, m); $('#sheet-h').textContent = x.titulo; $('#mes-cuerpo').innerHTML = x.cuerpo; }
   /** Lo que queda para el objetivo del día, o null si no hay objetivo o no se ha apuntado nada. */
   function quedaHoy() {
     const md = metaDia(), cs = comidasHoy();
@@ -498,12 +546,20 @@
   const ICONO_COMIDA = { 'Desayuno': '☕', 'Media mañana': '🍎', 'Comida': '🍽️', 'Merienda': '🥪', 'Cena': '🌙', 'Recena': '🥛', 'Entre horas': '🍏' };
   const lineaMacros = (t) => `${F(t.kcal)} kcal · P ${g1(t.p)} · H ${g1(t.h)} · G ${g1(t.g)}`;
   function htmlHoy() {
-    const cs = comidasHoy(), md = metaDia();
+    const esHoy = claveVista() === claveHoy(), cs = comidasDe(claveVista()), md = esHoy ? metaDia() : metaDe(claveVista());
+    if (!cs.length && !esHoy) return `<div class="vacio"><b>Ese día no apuntaste nada</b>Toca otro día de la tira para ver lo que comiste.</div>`;
     if (!cs.length) return `<div class="vacio"><b>Hoy aún no has apuntado nada</b>Monta lo que vas a comer en «Plato» y pulsa «Apuntar en Hoy».<div style="margin-top:14px"><button class="btn suave" data-a="tab" data-v="plato">Ir a mi plato</button></div></div>`;
-    let h = `<h3 class="subtitulo" style="margin:2px 4px 0">Lo que llevas</h3><div class="comidas">` + cs.map((c, i) =>
+    let h = `<h3 class="subtitulo" style="margin:2px 4px 0">${esHoy ? 'Lo que llevas' : 'Lo que comiste'}</h3><div class="comidas">` + cs.map((c, i) =>
       `<button class="comida" data-a="ver-comida" data-i="${i}">${mini({ p: c.t.p, h: c.t.h, g: c.t.g, n: c.nombre, em: ICONO_COMIDA[c.nombre] })}
         <span class="comida-txt"><b>${esc(c.nombre)}</b> <small>${lineaMacros(c.t)}</small></span> <span class="comida-hora">${esc(c.hora)}</span></button>`).join('') + `</div>`;
+    if (!md && !esHoy) return h;
     if (!md) return h + `<div class="veredicto" style="margin-top:12px"><h3>¿Cuánto te toca al día?</h3> <p>Calcula tus macros y te digo cómo vas y cuánto te queda.</p><div class="chips"><button class="chip" data-a="ir-macros">Calcular mis macros</button></div></div>`;
+    if (!esHoy) {                                                        // otro día: cumplido, o en qué se quedó corto o se pasó
+      const t = C.sumaDia(cs);
+      if (C.cumple(md, cs) === 'cumplido') return h + `<div class="veredicto bien" style="margin-top:12px">${ICO.check}<p><b>Día cumplido.</b> Los tres macros, dentro de tu objetivo.</p></div>`;
+      const fuera = MAC.filter((m) => { const o = C.num(md[m]); return o > 0 ? t[m] < 0.9 * o || t[m] > 1.1 * o : t[m] > 2; });
+      return h + `<div class="veredicto" style="margin-top:12px"><h3>A medias</h3> <p>${fuera.map((m) => `<span class="junto"><b>${NOMBRE[m]}:</b> ${F(t[m])} de ${F(md[m])} g</span>`).join(' · ')}</p></div>`;
+    }
     const x = quedaHoy(), q = x.queda, e = C.estadoDia(md, C.sumaDia(cs));       // pasarse y «ya está» se miden con el margen de «clavado»
     const partes = e.sobra.map((k) => k === 'kcal' ? `${F(x.pasa.kcal)} kcal` : `${F(x.pasa[k])} g de ${DE[k]}`);
     const pasado = partes.length ? `<p>Te has pasado ${partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1] : partes[0]}.</p>` : '';
@@ -512,21 +568,27 @@
       (nada ? '' : `<div class="fila-sub" style="font-size:14px;margin:0"><span class="m clave">${F(q.kcal)} kcal</span> ${MAC.map((m) => `<span class="m"><i class="punto ${m}"></i>${m.toUpperCase()} ${F(Math.round(q[m]))}</span>`).join(' ')}</div>`) + ` ${pasado}</div>`;
   }
   function pintaHoy() {
-    const cs = comidasHoy(), t = C.sumaDia(cs), md = metaDia(), hoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    $('#hoy-fecha').textContent = hoy;
+    const hoy = claveHoy(), k = claveVista(), esHoy = k === hoy, cs = comidasDe(k), t = C.sumaDia(cs), md = esHoy ? metaDia() : metaDe(k), f = C.fechaDe(k);
+    if (esHoy && md && cs.length) ponMeta(hoy, md);
+    $('#hoy-titulo').textContent = esHoy ? 'Hoy' : `${capital(SEMANA[f.getDay()])} ${f.getDate()}`;
+    $('#hoy-fecha').innerHTML = `${esHoy ? `${SEMANA[f.getDay()]}, ${f.getDate()} de ${MESES[f.getMonth()]}` : MESES[f.getMonth()]} <small>▾</small>`;
+    const sem = C.calendario(S.dias, S.metas, C.ultimosDias(hoy, 7), hoy, metaDia());
+    $('#hoy-semana').innerHTML = sem.dias.map((d) => htmlDia(d, k, true)).join('');
+    const frase = fraseSemana(sem.cuenta), st = $('#hoy-sem-txt'); st.hidden = !frase; st.innerHTML = frase;
     pintaAnillo(IDS_DIA, '#p-hoy', t, md, md ? Math.min(1, t.kcal / md.kcal) : 1);
     const dia = $('#d-dia'), demas = md && C.estadoDia(md, t).sobra.indexOf('kcal') >= 0 ? t.kcal - md.kcal : 0;
     dia.hidden = !(md && cs.length);
-    if (md) dia.textContent = demas >= 1 ? `Llevas ${F(t.kcal)} kcal: ${F(demas)} más que tus ${F(md.kcal)} del día.` : `Llevas ${F(t.kcal)} de tus ${F(md.kcal)} kcal del día.`;
+    if (md) dia.textContent = !esHoy ? `Ese día: ${F(t.kcal)} de tus ${F(md.kcal)} kcal.` : demas >= 1 ? `Llevas ${F(t.kcal)} kcal: ${F(demas)} más que tus ${F(md.kcal)} del día.` : `Llevas ${F(t.kcal)} de tus ${F(md.kcal)} kcal del día.`;
     $('#hoy-cuerpo').innerHTML = htmlHoy();
     pintaPie();
   }
   /** Los botones de abajo cambian con la pestaña y con lo que haya en el plato o en el día. */
   function pintaPie() {
-    const c = pestana === 'hoy' && comidasHoy().length ? cuotaAhora() : null, b = $('#btn-cuadrar');
+    const otro = pestana === 'hoy' && claveVista() !== claveHoy();          // viendo otro día: el botón devuelve a hoy
+    const c = !otro && pestana === 'hoy' && comidasHoy().length ? cuotaAhora() : null, b = $('#btn-cuadrar');
     $('#pie-plato').hidden = pestana !== 'plato';
     $('#btn-apuntar').hidden = !(pestana === 'plato' && S.plato.items.length > 0);
-    b.hidden = !c; if (c) b.textContent = 'Preparar ' + ARTICULO[c.nombre];
+    b.hidden = !(c || otro); if (otro) b.textContent = 'Volver a hoy'; else if (c) b.textContent = 'Preparar ' + ARTICULO[c.nombre];
   }
   function abreApuntar() {
     if (!S.plato.items.length) return;
@@ -542,7 +604,7 @@
       </div>`);
   }
   function abreComida(i) {
-    const c = comidasHoy()[i]; if (!c) return;
+    const c = comidasDe(claveVista())[i]; if (!c) return;
     abre(`<div><h2 id="sheet-h">${esc(c.nombre)}</h2><p class="nota" style="margin:4px 0 0;padding:0">${esc(c.hora)} · ${lineaMacros(c.t)}</p></div>`,
       `<div>${c.items.map((it) => `<div class="de-comida"><span>${esc(it.n)}${it.e ? ` <i>${esc(it.e)}</i>` : ''}</span> <b>${F(it.gramos)} g</b></div>`).join('')}</div>
       <div class="btn-fila" style="margin-top:16px"><button class="btn suave peligro" data-a="borrar-comida" data-i="${i}">Borrarla</button><button class="btn suave" data-a="cambiar-comida" data-i="${i}">Cambiarla</button></div>`);
@@ -555,7 +617,7 @@
     const ritmo = (r) => (r === 0 ? 'Para quedarte como estás' : `Unos ${F(Math.abs(r), 1)} kg ${r < 0 ? 'menos' : 'más'} por semana`);
     let h = `<div class="metas">` + Object.keys(METAS).map((k) => {
       const x = o[k];
-      return `<button class="meta" data-a="meta" data-v="${k}" aria-pressed="${S.meta.tipo === k}"><span class="marca">${ICO.check}</span>
+      return `<button class="meta" data-a="meta" data-v="${k}" aria-pressed="${S.meta.tipo === k}"><span class="meta-ok">${ICO.check}</span>
         <span class="meta-cab"><span><span class="meta-nombre">${METAS[k]}</span><span class="meta-ritmo">${ritmo(x.ritmo)}</span></span><span class="meta-kcal">${F(x.kcal)}<small>kcal</small></span></span>
         <span class="meta-macros">${MAC.map((m) => `<span class="m"><i class="punto ${m}"></i>${NOMBRE[m]} <b>${F(x[m])} g</b></span>`).join('')}</span></button>`;
     }).join('') + `</div>`;
@@ -630,7 +692,10 @@
   /* ── Acciones (clics) ──────────────────────────── */
   let conPuntero = false;
   const ACC = {
-    tab: (el) => irA(el.dataset.v),
+    tab: (el) => { if (el.dataset.v === 'hoy') diaVisto = null; irA(el.dataset.v); },
+    'ver-dia': (el) => { const k = el.dataset.k, hoy = claveHoy(); if (k > hoy) return; diaVisto = k === hoy ? null : k; cierra(); pintaHoy(); $('#p-hoy').scrollTop = 0; },
+    mes: abreMes,
+    'mes-ir': (el) => { const v = el.dataset.v.split('-').map(Number); pintaMes(v[0], v[1]); },
     cerrar: cierra,
     toast: () => { const f = accionToast; accionToast = null; $('#toast').classList.remove('visto'); if (f) f(); },
     modo: (el) => {
@@ -689,27 +754,28 @@
     'ver-ejemplo': () => { S.plato = { items: EJEMPLO.map((x) => ({ id: x.id, gramos: x.gramos })), modo: 'gramos', objetivo: null, ejemplo: true, comida: null }; platoTocado = true; guardar(); pintaPlato(); },
     'ir-macros': () => irA('macros'),
     aceptar: (el) => { const P = S.plato; P.objetivo = Object.assign({}, P.objetivo, { [el.dataset.m]: C.num(el.dataset.v) }); P.auto = false; platoTocado = true; guardar(); pintaPlato(); },
-    cuadrar: () => irA('plato'),                                          // «Preparar la cena»: el plato ya sale con lo que toca
+    cuadrar: () => { if (claveVista() !== claveHoy()) { diaVisto = null; pintaHoy(); $('#p-hoy').scrollTop = 0; } else irA('plato'); },   // «Volver a hoy» o «Preparar la cena»
     apuntar: abreApuntar,
     'que-comida': (el) => { $$('#sheet [data-a="que-comida"]').forEach((b) => b.setAttribute('aria-pressed', String(b === el))); $('#otra-comida').value = ''; },
     'apuntar-ya': () => {
       const elegida = $('#sheet [data-a="que-comida"][aria-pressed="true"]');
       const nombre = ($('#otra-comida').value || '').trim() || (elegida ? elegida.dataset.v : 'Comida');
-      const previo = JSON.stringify({ plato: S.plato, dias: S.dias }), cam = S.plato.cambia, k = claveHoy();
+      const previo = JSON.stringify({ plato: S.plato, dias: S.dias }), cam = S.plato.cambia, k = cam ? cam.dia : claveHoy();   // una comida que se estaba cambiando vuelve a su día
       const c = C.apuntar(nombre, new Date(), filas().map((x) => ({ a: x.a, gramos: x.it.gramos })));
       const lista = S.dias[k] || (S.dias[k] = []);
-      if (cam && cam.dia === k) { c.hora = cam.hora; lista.splice(Math.min(cam.pos, lista.length), 0, c); } else lista.push(c);
+      if (cam) { c.hora = cam.hora; lista.splice(Math.min(cam.pos, lista.length), 0, c); } else lista.push(c);
+      if (k === claveHoy() && metaDia()) ponMeta(k, metaDia());
       nuevoPlato(); guardar(); cierra(); pintaPlato();
       toast(`Apuntado en Hoy: ${nombre}`, 'Deshacer', () => { const x = JSON.parse(previo); S.plato = x.plato; S.dias = x.dias; platoTocado = true; guardar(); irA('plato'); });
     },
     'ver-comida': (el) => abreComida(+el.dataset.i),
     'borrar-comida': (el) => {
-      const k = claveHoy(), i = +el.dataset.i, previo = JSON.stringify(S.dias), c = (S.dias[k] || [])[i]; if (!c) return;
+      const k = claveVista(), i = +el.dataset.i, previo = JSON.stringify(S.dias), c = (S.dias[k] || [])[i]; if (!c) return;
       S.dias[k].splice(i, 1); guardar(); cierra(); pintaHoy();
-      toast(`${c.nombre}, borrada de hoy`, 'Deshacer', () => { S.dias = JSON.parse(previo); guardar(); pintaHoy(); });
+      toast(`${c.nombre}, borrada${k === claveHoy() ? ' de hoy' : ''}`, 'Deshacer', () => { S.dias = JSON.parse(previo); guardar(); pintaHoy(); });
     },
     'cambiar-comida': (el) => {
-      const k = claveHoy(), i = +el.dataset.i, c = (S.dias[k] || [])[i]; if (!c) return;
+      const k = claveVista(), i = +el.dataset.i, c = (S.dias[k] || [])[i]; if (!c) return;
       const previo = JSON.stringify({ plato: S.plato, dias: S.dias });
       S.plato = { items: c.items.filter((it) => porId.has(it.id)).map((it) => ({ id: it.id, gramos: it.gramos })), modo: 'gramos', objetivo: null, ejemplo: false, comida: null,
         cambia: { nombre: c.nombre, hora: c.hora, pos: i, dia: k } };

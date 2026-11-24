@@ -499,3 +499,53 @@ test('cuota: lo que queda del día, repartido entre las comidas que faltan', () 
   assert.deepEqual(Core.cuota({ p: 155, h: 187, g: 47 }, 3), { p: 52, h: 62, g: 16, kcal: 600 });
   assert.deepEqual(Core.cuota({ p: 80, h: 100, g: 20 }, 0), { p: 80, h: 100, g: 20, kcal: 900 }, 'sin más comidas por delante, todo');
 });
+
+/* ── Historial: días cumplidos, calendario y racha ── */
+const META = { kcal: 2140, p: 165, h: 235, g: 60 };
+const dia = (p, h, g) => [{ nombre: 'Comida', hora: '14:00', items: [], t: { kcal: 4 * p + 4 * h + 9 * g, p, h, g, f: 0 } }];
+
+test('cumple: un día cuenta como cumplido si los tres macros quedan entre el 90 % y el 110 % de su objetivo', () => {
+  assert.equal(Core.cumple(META, dia(165, 235, 60)), 'cumplido');
+  assert.equal(Core.cumple(META, dia(150, 255, 55)), 'cumplido', 'al 91 %, 109 % y 92 %');
+  assert.equal(Core.cumple(META, dia(140, 235, 60)), 'medias', 'la proteína se queda en el 85 %');
+  assert.equal(Core.cumple(META, dia(165, 235, 70)), 'medias', 'la grasa se pasa: 117 %');
+  assert.equal(Core.cumple(META, []), 'sin'); assert.equal(Core.cumple(META, undefined), 'sin');
+  assert.equal(Core.cumple(null, dia(100, 100, 30)), 'apuntado', 'sin objetivo ese día solo se sabe que apuntó');
+});
+
+test('otroDia y ultimosDias: cuentan días de calendario, también al cambiar de mes, de año y de hora', () => {
+  assert.equal(Core.otroDia('2026-11-24', -1), '2026-11-23'); assert.equal(Core.otroDia('2026-11-30', 1), '2026-12-01');
+  assert.equal(Core.otroDia('2027-01-01', -1), '2026-12-31'); assert.equal(Core.otroDia('2026-03-29', 1), '2026-03-30', 'el día del cambio de hora');
+  assert.deepEqual(Core.ultimosDias('2026-11-02', 4), ['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']);
+});
+
+test('calendario: cada día con su estado; hoy sin cumplir no cuenta, lo de antes de empezar tampoco', () => {
+  const dias = { '2026-11-20': dia(165, 235, 60), '2026-11-21': dia(100, 120, 80), '2026-11-23': dia(160, 240, 58), '2026-11-24': dia(40, 60, 15) };
+  const c = Core.calendario(dias, {}, Core.ultimosDias('2026-11-24', 7), '2026-11-24', META);
+  assert.deepEqual(c.dias.map((d) => d.estado), ['antes', 'antes', 'cumplido', 'medias', 'sin', 'cumplido', 'hoy']);
+  assert.deepEqual(c.dias.map((d) => d.k), Core.ultimosDias('2026-11-24', 7));
+  assert.deepEqual(c.cuenta, { cumplido: 2, medias: 1, sin: 1, apuntado: 0 });
+});
+
+test('calendario: cada día se mide con el objetivo que tenía ese día; lo futuro no cuenta', () => {
+  const dias = { '2026-11-23': dia(120, 180, 50), '2026-11-24': dia(165, 235, 60) };
+  const metas = { '2026-11-23': { kcal: 1650, p: 120, h: 180, g: 50 } };
+  const c = Core.calendario(dias, metas, ['2026-11-23', '2026-11-24', '2026-11-25'], '2026-11-24', META);
+  assert.deepEqual(c.dias.map((d) => d.estado), ['cumplido', 'cumplido', 'futuro']); assert.equal(c.cuenta.cumplido, 2);
+  assert.deepEqual(Core.calendario(dias, {}, ['2026-11-23'], '2026-11-24', null).dias[0].estado, 'apuntado', 'sin objetivo, solo «apuntado»');
+  assert.deepEqual(Core.calendario({}, {}, ['2026-11-23', '2026-11-24'], '2026-11-24', META).dias.map((d) => d.estado), ['antes', 'hoy'], 'recién estrenada');
+});
+
+test('diasDelMes: las claves del mes y los huecos hasta su primer día (la semana empieza en lunes)', () => {
+  const nov = Core.diasDelMes(2026, 11); assert.equal(nov.claves.length, 30); assert.equal(nov.claves[0], '2026-11-01'); assert.equal(nov.claves[29], '2026-11-30');
+  assert.equal(nov.huecos, 6, 'el 1 de noviembre de 2026 es domingo');
+  const feb = Core.diasDelMes(2027, 2); assert.equal(feb.claves.length, 28); assert.equal(feb.huecos, 0, 'el 1 de febrero de 2027 es lunes');
+});
+
+test('racha: días cumplidos seguidos hasta hoy; si hoy aún no está, cuenta hasta ayer', () => {
+  const ok = dia(165, 235, 60), mal = dia(90, 120, 90);
+  const dias = { '2026-11-17': ok, '2026-11-18': ok, '2026-11-19': ok, '2026-11-20': mal, '2026-11-22': ok, '2026-11-23': ok, '2026-11-24': dia(40, 60, 15) };
+  assert.deepEqual(Core.racha(dias, {}, '2026-11-24', META), { actual: 2, mejor: 3 });
+  dias['2026-11-24'] = ok; assert.deepEqual(Core.racha(dias, {}, '2026-11-24', META), { actual: 3, mejor: 3 });
+  assert.deepEqual(Core.racha({}, {}, '2026-11-24', META), { actual: 0, mejor: 0 });
+});
