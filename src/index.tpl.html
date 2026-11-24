@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#E8ECF1">
+<title>Macros</title>
+<script>
+/* Aspecto antes de pintar: lo elegido, o claro/oscuro según el dispositivo */
+(function () {
+  var a = 'auto';
+  try { a = (JSON.parse(localStorage.getItem('algramo.v1') || '{}').aspecto) || 'auto'; } catch (e) {}
+  var r = document.documentElement;
+  if (a !== 'claro' && a !== 'oscuro') {
+    var t = r.getAttribute('data-theme');
+    a = t === 'dark' || (t !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'oscuro' : 'claro';
+  }
+  r.setAttribute('data-aspecto', a);
+})();
+</script>
+<style>
+/*FUENTES*/
+/*CSS*/
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <main class="pantallas">
+
+    <section class="pantalla activa" id="p-plato" aria-label="Mi plato">
+      <header class="cima">
+        <div class="cima-fila">
+          <h1>Mi plato</h1>
+          <div class="cima-botones">
+            <button class="redondo" data-a="platos" aria-label="Platos guardados"><svg class="ico" viewBox="0 0 24 24"><path d="M7 4h10a1 1 0 011 1v15l-6-4-6 4V5a1 1 0 011-1z"/></svg></button>
+            <button class="redondo" data-a="aspecto" aria-label="Aspecto de la app"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"/></svg></button>
+          </div>
+        </div>
+        <div class="resumen">
+          <div class="plato">
+            <svg viewBox="0 0 160 160" aria-hidden="true">
+              <defs>
+                <radialGradient id="pl-base" cx="34%" cy="24%" r="90%"><stop offset="0" style="stop-color:var(--plato-luz)"/><stop offset="1" style="stop-color:var(--plato)"/></radialGradient>
+                <linearGradient id="pl-hondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--hondo-a)"/><stop offset="1" style="stop-color:var(--hondo-b)"/></linearGradient>
+              </defs>
+              <circle cx="80" cy="80" r="79" fill="url(#pl-base)"/>
+              <circle cx="80" cy="80" r="78.5" fill="none" style="stroke:var(--plato-filo)" stroke-width="1"/>
+              <circle cx="80" cy="80" r="65" fill="none" style="stroke:var(--pista)" stroke-width="12"/>
+              <circle class="arco p" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle class="arco h" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle class="arco g" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle cx="80" cy="80" r="51" fill="url(#pl-hondo)"/>
+              <circle cx="80" cy="80" r="50.5" fill="none" style="stroke:var(--plato-filo)" stroke-width="1"/>
+            </svg>
+            <div class="plato-centro"><b id="t-kcal">0</b><span>kcal</span></div>
+          </div>
+          <div class="datos" id="datos-plato">
+            <div class="dato" data-m="p"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Proteína</span><span class="dato-valor"><b id="t-p">0</b><small id="s-p">g</small></span></div><div class="barra"><i id="b-p"></i></div></div>
+            <div class="dato" data-m="h"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Hidratos</span><span class="dato-valor"><b id="t-h">0</b><small id="s-h">g</small></span></div><div class="barra"><i id="b-h"></i></div></div>
+            <div class="dato" data-m="g"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Grasa</span><span class="dato-valor"><b id="t-g">0</b><small id="s-g">g</small></span></div><div class="barra"><i id="b-g"></i></div></div>
+          </div>
+        </div>
+        <p class="dia" id="t-dia" hidden></p>
+      </header>
+      <div class="hoja">
+        <div class="modos" id="modos-plato" role="tablist" aria-label="Qué sabes de tu plato">
+          <button role="tab" data-a="modo" data-v="macros">Pongo los macros</button>
+          <button role="tab" data-a="modo" data-v="gramos">Pongo los gramos</button>
+        </div>
+        <div id="plato-extra"></div>
+        <div class="filas" id="plato-filas"></div>
+        <p class="nota" id="plato-nota"></p>
+      </div>
+    </section>
+
+    <section class="pantalla" id="p-alimentos" aria-label="Alimentos">
+      <header class="cima">
+        <div class="cima-fila">
+          <h1>Alimentos</h1>
+          <div class="cima-botones">
+            <button class="redondo" data-a="nuevo" aria-label="Crear un alimento propio"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+        </div>
+        <div id="busca-biblio"></div>
+      </header>
+      <div class="hoja">
+        <div id="lista-biblio"></div>
+        <p class="nota">Valores por 100 g. <button class="enlace" data-a="datos">De dónde salen los datos</button></p>
+      </div>
+    </section>
+
+    <section class="pantalla" id="p-hoy" aria-label="Hoy">
+      <header class="cima">
+        <div class="cima-fila"><h1>Hoy</h1><span class="cima-fecha" id="hoy-fecha"></span></div>
+        <div class="resumen">
+          <div class="plato">
+            <svg viewBox="0 0 160 160" aria-hidden="true">
+              <defs>
+                <radialGradient id="hy-base" cx="34%" cy="24%" r="90%"><stop offset="0" style="stop-color:var(--plato-luz)"/><stop offset="1" style="stop-color:var(--plato)"/></radialGradient>
+                <linearGradient id="hy-hondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--hondo-a)"/><stop offset="1" style="stop-color:var(--hondo-b)"/></linearGradient>
+              </defs>
+              <circle cx="80" cy="80" r="79" fill="url(#hy-base)"/>
+              <circle cx="80" cy="80" r="78.5" fill="none" style="stroke:var(--plato-filo)" stroke-width="1"/>
+              <circle cx="80" cy="80" r="65" fill="none" style="stroke:var(--pista)" stroke-width="12"/>
+              <circle class="arco p" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle class="arco h" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle class="arco g" cx="80" cy="80" r="65" stroke-dasharray="0 500"/>
+              <circle cx="80" cy="80" r="51" fill="url(#hy-hondo)"/>
+              <circle cx="80" cy="80" r="50.5" fill="none" style="stroke:var(--plato-filo)" stroke-width="1"/>
+            </svg>
+            <div class="plato-centro"><b id="d-kcal">0</b><span>kcal</span></div>
+          </div>
+          <div class="datos">
+            <div class="dato" data-m="p"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Proteína</span><span class="dato-valor"><b id="d-p">0</b><small id="ds-p">g</small></span></div><div class="barra"><i id="db-p"></i></div></div>
+            <div class="dato" data-m="h"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Hidratos</span><span class="dato-valor"><b id="d-h">0</b><small id="ds-h">g</small></span></div><div class="barra"><i id="db-h"></i></div></div>
+            <div class="dato" data-m="g"><div class="dato-fila"><span class="dato-nombre"><i class="punto"></i>Grasa</span><span class="dato-valor"><b id="d-g">0</b><small id="ds-g">g</small></span></div><div class="barra"><i id="db-g"></i></div></div>
+          </div>
+        </div>
+        <p class="dia" id="d-dia" hidden></p>
+      </header>
+      <div class="hoja" id="hoy-cuerpo"></div>
+    </section>
+
+    <section class="pantalla" id="p-macros" aria-label="Mis macros">
+      <header class="cima">
+        <div class="cima-fila"><h1>Mis macros</h1></div>
+        <p class="cima-sub">Lo que te toca comer al día según tu cuerpo y lo que buscas.</p>
+      </header>
+      <div class="hoja">
+        <div class="modos" id="modos-meta" role="tablist" aria-label="Cómo fijar tus macros">
+          <button role="tab" data-a="meta-modo" data-v="calc">Calcúlamelos</button>
+          <button role="tab" data-a="meta-modo" data-v="mano">Ya los sé</button>
+        </div>
+        <div id="macros-cuerpo"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="pie-botones" id="pie-plato">
+      <button class="btn" id="btn-anadir" data-a="anadir"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Añadir alimento</button>
+      <button class="btn claro" id="btn-apuntar" data-a="apuntar" hidden>Apuntar en Hoy</button>
+    </div>
+    <button class="btn" id="btn-cuadrar" data-a="cuadrar" hidden>Cuadrar con lo que me queda</button>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Secciones">
+      <button role="tab" data-a="tab" data-v="plato"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>Plato</button>
+      <button role="tab" data-a="tab" data-v="alimentos"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Alimentos</button>
+      <button role="tab" data-a="tab" data-v="hoy"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Hoy</button>
+      <button role="tab" data-a="tab" data-v="macros"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Mis macros</button>
+    </nav>
+  </footer>
+
+  <div class="velo" id="velo" data-a="cerrar"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script type="application/json" id="datos">/*DATOS*/</script>
+<script>
+/*CORE*/
+</script>
+<script>
+/*UI*/
+</script>
+</body>
+</html>

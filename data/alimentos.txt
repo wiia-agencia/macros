@@ -1,0 +1,402 @@
+# cat|nombre|estado|emoji|sinonimos|fuente
+# fuente: U#id o C#id (exacto) · U:tok;tok;-excluido (todas las palabras; ^ = empieza por)
+carn|Pechuga de pollo|cruda|🍗|filete de pollo|U#5062
+carn|Pechuga de pollo|asada o plancha|🍗|filete de pollo|U#5064
+carn|Contramuslo de pollo sin piel|crudo|🍗|muslo|U#5096
+carn|Contramuslo de pollo sin piel|asado|🍗|muslo|U:^chicken, broilers or fryers, thigh, meat only, cooked, roasted
+carn|Muslo de pollo sin piel|crudo|🍗|jamoncito,zanco|U#5071
+carn|Muslo de pollo sin piel|asado|🍗|jamoncito,zanco|U#5073
+carn|Pollo con piel|asado|🍗|pollo entero|U:^chicken, broilers or fryers, meat and skin, cooked, roasted
+carn|Alitas de pollo con piel|asadas|🍗|alas|U:^chicken, broilers or fryers, wing, meat and skin, cooked, roasted
+carn|Carne picada de pollo|cruda|🍗||U:^chicken, ground, raw
+carn|Pechuga de pavo|cruda|🦃|filete de pavo|U#5219
+carn|Pechuga de pavo|asada o plancha|🦃|filete de pavo|U#5220
+carn|Carne picada de pavo|cruda|🦃||U:^turkey, ground, raw
+carn|Filete de ternera magro|crudo|🥩|vaca,vacuno,tapa,babilla|U:^beef, round, top round;separable lean only;trimmed to 1/8" fat, all grades, raw
+carn|Filete de ternera magro|a la plancha|🥩|vaca,vacuno,tapa,babilla|U:^beef, round, top round;separable lean only;trimmed to 1/8" fat, all grades, cooked, broiled
+carn|Solomillo de ternera|crudo|🥩|vaca,vacuno|U:^beef, tenderloin;separable lean only;trimmed to 1/8" fat, all grades, raw
+carn|Solomillo de ternera|a la plancha|🥩|vaca,vacuno|U:^beef, tenderloin;separable lean only;trimmed to 1/8" fat, all grades, cooked, broiled
+carn|Entrecot de ternera|crudo|🥩|chuleton,lomo alto,vaca|U:^beef, rib eye steak, boneless, lip off, separable lean and fat, trimmed to 0" fat, all grades, raw
+carn|Entrecot de ternera|a la plancha|🥩|chuleton,lomo alto,vaca|U:^beef, rib eye steak, boneless, lip off, separable lean and fat, trimmed to 0" fat, all grades, cooked, grilled
+carn|Carne picada de ternera (5 % grasa)|cruda|🥩|vacuno,hamburguesa|U:^beef, ground, 95% lean meat / 5% fat, raw
+carn|Carne picada de ternera (10 % grasa)|cruda|🥩|vacuno,hamburguesa|U:^beef, ground, 90% lean meat / 10% fat, raw
+carn|Carne picada de ternera (20 % grasa)|cruda|🥩|vacuno,hamburguesa|U:^beef, ground, 80% lean meat / 20% fat, raw
+carn|Carne picada de ternera (10 % grasa)|cocinada|🥩|vacuno|U:^beef, ground, 90% lean meat / 10% fat, patty, cooked, pan-broiled
+carn|Hamburguesa de ternera (20 % grasa)|a la plancha|🍔|vacuno,burger|U:^beef, ground, 80% lean meat / 20% fat, patty, cooked, pan-broiled
+carn|Hígado de ternera|crudo|🥩||U:^beef, variety meats and by-products, liver, raw
+carn|Lomo de cerdo|crudo|🥩|cinta de lomo|U:^pork, fresh, loin, center loin (chops), boneless, separable lean only, raw
+carn|Lomo de cerdo|a la plancha|🥩|cinta de lomo|U#10163
+carn|Solomillo de cerdo|crudo|🥩||U:^pork, fresh, loin, tenderloin, separable lean only, raw
+carn|Solomillo de cerdo|asado|🥩||U:^pork, fresh, loin, tenderloin, separable lean only, cooked, roasted
+carn|Chuleta de cerdo|a la plancha|🥩||U:^pork, fresh, loin, center rib (chops), bone-in, separable lean and fat, cooked, broiled
+carn|Costillas de cerdo|cocinadas|🍖|costillar|U:^pork, fresh, spareribs, separable lean and fat, cooked
+carn|Carne picada de cerdo|cruda|🥩||U:^pork, fresh, ground, raw
+carn|Panceta / bacon|crudo|🥓|beicon,tocino|U#10123
+carn|Bacon|a la plancha|🥓|beicon,panceta|U#10862
+carn|Pierna de cordero|asada|🍖||U#17014
+carn|Chuletas de cordero|a la plancha|🍖||U#17024
+carn|Conejo|crudo|🐇||U:^game meat, rabbit, domesticated, composite of cuts, raw
+carn|Conejo|asado|🐇||U:^game meat, rabbit, domesticated, composite of cuts, cooked, roasted
+carn|Jamón serrano||🍖|jamon curado|C#28845
+carn|Jamón cocido (york)||🍖|jamon dulce,fiambre|C#28900
+carn|Pechuga de pavo en lonchas||🦃|fiambre de pavo|C#28964
+carn|Pechuga de pollo en lonchas||🍗|fiambre de pollo|C#28963
+carn|Chorizo|||embutido|U:chorizo
+carn|Salchichón / fuet|||embutido,longaniza|C#30300
+carn|Morcilla|||embutido|C#8703
+carn|Salchichas Frankfurt||🌭|perrito|C#30134
+carn|Salchicha fresca de cerdo|cruda|🌭|longaniza fresca|C#30050
+carn|Mortadela|||embutido|U:^mortadella
+pesc|Merluza|cruda|🐟|pescadilla|C#26044
+pesc|Merluza|cocinada|🐟|pescadilla|C#26120
+pesc|Bacalao fresco|crudo|🐟||U:^fish, cod, atlantic, raw
+pesc|Bacalao fresco|cocinado|🐟||U:^fish, cod, atlantic, cooked, dry heat
+pesc|Salmón|crudo|🐟||U:^fish, salmon, atlantic, farmed, raw
+pesc|Salmón|a la plancha|🐟||U:^fish, salmon, atlantic, farmed, cooked, dry heat
+pesc|Salmón ahumado||🐟||C#26037
+pesc|Atún fresco|crudo|🐟|bonito|U:^fish, tuna, fresh, bluefin, raw
+pesc|Atún fresco|a la plancha|🐟|bonito|U:^fish, tuna, fresh, bluefin, cooked, dry heat
+pesc|Atún al natural (lata, escurrido)||🥫|conserva|C#26039
+pesc|Atún en aceite (lata, escurrido)||🥫|conserva|C#26071
+pesc|Sardinas|crudas|🐟||C#26065
+pesc|Sardinas|a la plancha|🐟||C#26136
+pesc|Sardinas en aceite (lata, escurridas)||🥫|conserva,sardinillas|U:^fish, sardine, atlantic, canned in oil, drained solids with bone
+pesc|Caballa|cruda|🐟|verdel|U:^fish, mackerel, atlantic, raw
+pesc|Caballa en conserva (escurrida)||🥫||U:^fish, mackerel, jack, canned, drained solids
+pesc|Boquerones|crudos|🐟|anchoa fresca|C#26079
+pesc|Boquerones en vinagre||🐟||C#26187
+pesc|Anchoas en aceite (escurridas)||🥫|conserva|C#26000
+pesc|Dorada|cruda|🐟||C#26080
+pesc|Lubina|cruda|🐟|robalo|C#26072
+pesc|Lenguado|crudo|🐟|gallo|U:^fish, flatfish (flounder and sole species), raw
+pesc|Rape|crudo|🐟||U:^fish, monkfish, raw
+pesc|Pez espada|crudo|🐟|emperador|U:^fish, swordfish, raw
+pesc|Trucha|cruda|🐟||U:^fish, trout, rainbow, farmed, raw
+pesc|Panga|cocinada|🐟||C#27018
+pesc|Tilapia|cruda|🐟||U:^fish, tilapia, raw
+pesc|Gambas / langostinos|crudos|🦐||U#15270
+pesc|Gambas / langostinos|cocidos|🦐||U#15271
+pesc|Mejillones (sin concha)|crudos|🦪||U:^mollusks, mussel, blue, raw
+pesc|Mejillones (sin concha)|cocidos|🦪||U:^mollusks, mussel, blue, cooked, moist heat
+pesc|Mejillones al natural (lata, escurridos)||🥫|conserva|C#10028
+pesc|Mejillones en escabeche (lata, escurridos)||🥫|conserva|C#10081
+pesc|Calamares|crudos|🦑|chipirones|C#10001
+pesc|Calamares a la romana|fritos|🦑|rabas|C#10002
+pesc|Pulpo|crudo|🐙||C#10018
+pesc|Pulpo|cocido|🐙||C#10079
+pesc|Sepia|cruda|🦑|choco,jibia|C#10016
+pesc|Almejas (sin concha)|crudas|🦪||C#10017
+pesc|Palitos de cangrejo (surimi)||🦀||C#26046
+pesc|Pescado empanado|frito|🐟|varitas,rebozado|C#26030
+lact|Huevo|crudo|🥚||U#1123
+lact|Huevo|cocido|🥚|huevo duro|U#1129
+lact|Huevo|frito|🍳||U#1128
+lact|Tortilla francesa||🍳||U#1130
+lact|Clara de huevo|cruda|🥚|claras pasteurizadas|U:^egg, white, raw, fresh
+lact|Yema de huevo|cruda|🥚||U:^egg, yolk, raw, fresh
+lact|Leche entera||🥛|sin lactosa|C#19023
+lact|Leche semidesnatada||🥛|sin lactosa|C#19041
+lact|Leche desnatada||🥛|sin lactosa|C#19050
+lact|Yogur natural||🥛|yogurt|C#19593
+lact|Yogur natural desnatado||🥛|yogurt 0|C#19594
+lact|Yogur natural azucarado||🥛|yogurt|C#19599
+lact|Yogur griego natural||🥛|yogurt|U#1293
+lact|Yogur griego desnatado (0 %)||🥛|yogurt|U#1256
+lact|Queso fresco batido 0 %||🥛|queso batido,quark|C#19644
+lact|Queso fresco batido (3 % grasa)||🥛|queso batido,quark|C#19646
+lact|Requesón||🧀|ricotta|U#1036
+lact|Queso cottage||🧀||U#1015
+lact|Mozzarella fresca||🧀||C#19590
+lact|Mozzarella rallada (para pizza)||🧀||U#1026
+lact|Queso curado (media de quesos duros)||🧀|manchego,viejo,semicurado|C#12100
+lact|Queso tierno o semicurado (media de quesos)||🧀|havarti,tierno|C#12999
+lact|Queso emmental||🧀|rallado|C#12115
+lact|Queso cheddar||🧀||U#1009
+lact|Queso gouda||🧀||U:^cheese, gouda
+lact|Queso edam||🧀|bola|U:^cheese, edam
+lact|Queso parmesano||🧀|grana|U:^cheese, parmesan, hard
+lact|Queso feta||🧀||U:^cheese, feta
+lact|Queso de cabra (rulo)||🧀||U#1157
+lact|Queso azul||🧀|roquefort,cabrales|U:^cheese, blue
+lact|Queso brie||🧀||U:^cheese, brie
+lact|Queso camembert||🧀||U:^cheese, camembert
+lact|Queso crema (de untar)||🧀|philadelphia|U:^cheese, cream
+lact|Queso en lonchas (fundido)||🧀|tranchetes,sandwich|C#12300
+lact|Nata para cocinar (18 %)||🥛|crema de leche|U:^cream, fluid, light (coffee cream or table cream)
+lact|Nata para montar (35 %)||🥛|crema de leche|U:^cream, fluid, heavy whipping
+lact|Kéfir||🥛||U:^kefir, lowfat, plain
+lact|Leche condensada||🥛||U:^milk, canned, condensed, sweetened
+lact|Leche evaporada||🥛||U#1096
+cere|Arroz blanco|crudo|🍚||U#20444
+cere|Arroz blanco|cocido|🍚||U#20445
+cere|Arroz integral|crudo|🍚||U:^rice, brown, long-grain, raw
+cere|Arroz integral|cocido|🍚||U:^rice, brown, long-grain, cooked
+cere|Arroz basmati|crudo|🍚||C#9119
+cere|Pasta|cruda|🍝|macarrones,espaguetis,fideos,tallarines|U:^pasta, dry, unenriched
+cere|Pasta|cocida|🍝|macarrones,espaguetis,fideos,tallarines|U:^pasta, cooked, unenriched, without added salt
+cere|Pasta integral|cruda|🍝|macarrones,espaguetis|U:^pasta, whole-wheat, dry
+cere|Pasta integral|cocida|🍝|macarrones,espaguetis|U:^pasta, whole-wheat, cooked
+cere|Fideos de arroz|cocidos|🍜|noodles|U:^rice noodles, cooked
+cere|Cuscús|crudo|🍚|couscous|U:^couscous, dry
+cere|Cuscús|cocido|🍚|couscous|U:^couscous, cooked
+cere|Quinoa|cruda|🍚|quinua|U:^quinoa, uncooked
+cere|Quinoa|cocida|🍚|quinua|U:^quinoa, cooked
+cere|Bulgur|cocido|🍚||U:^bulgur, cooked
+cere|Copos de avena||🥣|avena,porridge,gachas|U:^cereals, oats, regular and quick, not fortified, dry
+cere|Harina de avena||🥣||U:^oat flour, partially debranned
+cere|Salvado de avena||🥣||U:^oat bran, raw
+cere|Harina de trigo||🌾||U:^wheat flour, white, all-purpose, unenriched
+cere|Harina de trigo integral||🌾||U#20080
+cere|Maicena (almidón de maíz)||🌾||U:^cornstarch
+cere|Pan rallado||🍞||U#18079
+cere|Pan blanco (barra)||🥖|baguette,pistola|C#7001
+cere|Pan integral||🥖||C#7110
+cere|Pan de molde blanco||🍞|bimbo,sandwich|C#7200
+cere|Pan de molde integral||🍞|bimbo,sandwich|C#7111
+cere|Pan tostado||🍞|tostada,tostadas|C#7004
+cere|Pan de centeno||🍞||U:^bread, rye
+cere|Pan de pita||🫓||U#18413
+cere|Pan de hamburguesa||🍞|bollo,perrito|U:^rolls, hamburger or hotdog, plain
+cere|Biscotes (pan tostado)||🍞|tostadas|U#18220
+cere|Picos / colines||🥖|grisines,regañas|C#7525
+cere|Tortilla de trigo (wrap)||🌯|fajita|C#7815
+cere|Tortilla de maíz||🌯|taco|C#7813
+cere|Tortitas de arroz||🍘||U:^snacks, rice cakes, brown rice, plain
+cere|Tortitas de maíz||🍘||U#19419
+cere|Corn flakes||🥣|cereales|C#32014
+cere|Muesli||🥣|cereales|C#32004
+cere|Granola||🥣|cereales|U:^cereals ready-to-eat, granola, homemade
+cere|Cereales de chocolate||🥣||C#32011
+cere|Palomitas (sin aceite)||🍿||U#19034
+legu|Lentejas|crudas|🫘||U:^lentils, raw
+legu|Lentejas|cocidas|🫘|bote|U:^lentils, mature seeds, cooked, boiled, without salt
+legu|Garbanzos|crudos|🫘||U:^chickpeas (garbanzo beans, bengal gram), mature seeds, raw
+legu|Garbanzos|cocidos|🫘||U:^chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt
+legu|Garbanzos de bote (escurridos)||🫘|conserva|U:^chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained solids
+legu|Alubias blancas|crudas|🫘|judias,habichuelas,fabes|U:^beans, white, mature seeds, raw
+legu|Alubias blancas|cocidas|🫘|judias,habichuelas,fabes,bote|U:^beans, white, mature seeds, cooked, boiled, without salt
+legu|Alubias rojas|crudas|🫘|judias,frijoles|U:^beans, kidney, red, mature seeds, raw
+legu|Alubias rojas|cocidas|🫘|judias,frijoles,bote|U:^beans, kidney, red, mature seeds, cooked, boiled, without salt
+legu|Alubias negras|cocidas|🫘|frijoles|U:^beans, black, mature seeds, cooked, boiled, without salt
+legu|Alubias pintas|cocidas|🫘|judias,frijoles|U:^beans, pinto, mature seeds, cooked, boiled, without salt
+legu|Habas|cocidas|🫘||U:^broadbeans (fava beans), mature seeds, cooked, boiled, without salt
+legu|Soja|cocida|🫘||U:^soybeans, mature cooked, boiled, without salt
+legu|Edamame|cocido|🫘||U:^edamame, frozen, prepared
+legu|Soja texturizada (harina de soja desgrasada)|seca|🫘|proteina vegetal|U#16117
+legu|Tofu firme||||U#16426
+legu|Tofu natural (blando)||||C#20904
+legu|Tempeh||🫘||U:^tempeh
+legu|Hummus||🫘|humus|C#25621
+legu|Falafel||🧆||C#25571
+legu|Hamburguesa vegetal (soja)||🍔|vegana|C#20914
+legu|Altramuces|cocidos|🫘|chochos|U:^lupins, mature seeds, cooked, boiled, without salt
+verd|Patata|cruda|🥔|papa|U#11352
+verd|Patata|cocida|🥔|papa,hervida|U#11367
+verd|Patata|asada|🥔|papa|U#11363
+verd|Patatas fritas (en aceite)||🍟|papas|U#21138
+verd|Puré de patata (con leche y mantequilla)||🥔||U#11934
+verd|Boniato|crudo|🍠|batata,camote|U:^sweet potato, raw, unprepared
+verd|Boniato|asado|🍠|batata,camote|U:^sweet potato, cooked, baked in skin, flesh, without salt
+verd|Yuca|cruda||mandioca|U:^cassava, raw
+verd|Judías verdes|crudas||habichuelas,ejotes,vainas|U#11052
+verd|Judías verdes|cocidas||habichuelas,ejotes,vainas|U#11053
+verd|Judías verdes en conserva (escurridas)||🥬|habichuelas,bote|U#11056
+verd|Brócoli|crudo|🥦|brecol|U:^broccoli, raw
+verd|Brócoli|cocido|🥦|brecol|U:^broccoli, cooked, boiled, drained, without salt
+verd|Coliflor|cruda|🥦||U:^cauliflower, raw
+verd|Coliflor|cocida|🥦||U:^cauliflower, cooked, boiled, drained, without salt
+verd|Espinacas|crudas|🥬||U:^spinach, raw
+verd|Espinacas|cocidas|🥬||U:^spinach, cooked, boiled, drained, without salt
+verd|Acelgas|cocidas|🥬||U:^chard, swiss, cooked, boiled, drained, without salt
+verd|Lechuga||🥬|ensalada,romana|U:^lettuce, cos or romaine, raw
+verd|Lechuga iceberg||🥬|ensalada|U:^lettuce, iceberg (includes crisphead types), raw
+verd|Rúcula||🥬|ensalada|U:^arugula, raw
+verd|Canónigos||🥬|ensalada|U:^cornsalad, raw
+verd|Kale||🥬|col rizada|U:^kale, raw
+verd|Endibia||🥬||U:^chicory, witloof, raw
+verd|Tomate||🍅|cherry|U:^tomatoes, red, ripe, raw, year round average
+verd|Tomate triturado (lata)||🥫|conserva|U:^tomatoes, crushed, canned
+verd|Pepino||🥒||U:^cucumber, with peel, raw
+verd|Pimiento rojo||🫑||U:^peppers, sweet, red, raw
+verd|Pimiento verde||🫑||U:^peppers, sweet, green, raw
+verd|Cebolla||🧅||U:^onions, raw
+verd|Ajo||🧄||U:^garlic, raw
+verd|Zanahoria|cruda|🥕||U:^carrots, raw
+verd|Zanahoria|cocida|🥕||U:^carrots, cooked, boiled, drained, without salt
+verd|Calabacín|crudo|🥒|zucchini|U:^squash, summer, zucchini, includes skin, raw
+verd|Calabacín|cocido|🥒|zucchini|U:^squash, summer, zucchini, includes skin, cooked, boiled, drained, without salt
+verd|Berenjena|cruda|🍆||U:^eggplant, raw
+verd|Berenjena|cocida|🍆||U:^eggplant, cooked, boiled, drained, without salt
+verd|Calabaza|cruda|🎃||U:^pumpkin, raw
+verd|Calabaza|cocida|🎃||U:^pumpkin, cooked, boiled, drained, without salt
+verd|Champiñones|crudos|🍄|setas|U:^mushrooms, white, raw
+verd|Champiñones|cocinados|🍄|setas|U:^mushrooms, white, stir-fried
+verd|Setas de ostra||🍄|setas|U:^mushrooms, oyster, raw
+verd|Espárragos verdes|crudos||trigueros|U:^asparagus, raw
+verd|Espárragos verdes|cocidos||trigueros|U:^asparagus, cooked, boiled, drained
+verd|Espárragos blancos (lata, escurridos)||🥫|conserva|U:^asparagus, canned, drained solids
+verd|Alcachofa|cocida|||U:^artichokes, (globe or french), cooked, boiled, drained, without salt
+verd|Col / repollo||🥬||U:^cabbage, raw
+verd|Lombarda||🥬|col morada|U:^cabbage, red, raw
+verd|Coles de Bruselas|cocidas|||U:^brussels sprouts, cooked, boiled, drained, without salt
+verd|Puerro||||U:^leeks, (bulb and lower leaf-portion), raw
+verd|Apio||||U:^celery, raw
+verd|Remolacha|cocida|||U:^beets, cooked, boiled, drained
+verd|Rábano||||U:^radishes, raw
+verd|Guisantes|crudos||chicharos,arvejas|U:^peas, green, raw
+verd|Guisantes|cocidos||chicharos,arvejas,congelados|U:^peas, green, cooked, boiled, drained, without salt
+verd|Guisantes en conserva (escurridos)||🥫|bote|U#11308
+verd|Maíz dulce (lata, escurrido)||🌽|conserva|U#11172
+verd|Menestra de verduras|cocida|🥬|congelada|U:^vegetables, mixed, frozen, cooked, boiled, drained, without salt
+verd|Pisto||🍆|ratatouille|C#25018
+verd|Aceitunas verdes||🫒|olivas|U:^olives, pickled, canned or bottled, green
+verd|Aceitunas negras||🫒|olivas|U:^olives, ripe, canned (small-extra large)
+verd|Pepinillos en vinagre||🥒|encurtidos|U:^pickles, cucumber, dill or kosher dill
+verd|Brotes de soja||🌱||U:^mung beans, mature seeds, sprouted, raw
+frut|Manzana||🍎||U:^apples, raw, with skin
+frut|Plátano||🍌|banana|U:^bananas, raw
+frut|Naranja||🍊||U:^oranges, raw, all commercial varieties
+frut|Mandarina||🍊|clementina|U:^tangerines, (mandarin oranges), raw
+frut|Pera||🍐||U:^pears, raw
+frut|Fresas||🍓|fresones|U:^strawberries, raw
+frut|Uvas||🍇||U:^grapes, red or green (european type
+frut|Melón||🍈||U:^melons, honeydew, raw
+frut|Sandía||🍉||U:^watermelon, raw
+frut|Melocotón||🍑|durazno|U:^peaches, yellow, raw
+frut|Nectarina||🍑||U:^nectarines, raw
+frut|Albaricoque||🍑||U:^apricots, raw
+frut|Ciruela||||U:^plums, raw
+frut|Cerezas||🍒||U:^cherries, sweet, raw
+frut|Kiwi||🥝||U:^kiwifruit, green, raw
+frut|Piña||🍍|anana|U:^pineapple, raw, all varieties
+frut|Mango||🥭||U:^mangos, raw
+frut|Papaya||||U:^papayas, raw
+frut|Arándanos||🫐||U:^blueberries, raw
+frut|Frambuesas||||U:^raspberries, raw
+frut|Moras||||U:^blackberries, raw
+frut|Higos|||brevas|U:^figs, raw
+frut|Granada||||U:^pomegranates, raw
+frut|Limón||🍋||U:^lemons, raw, without peel
+frut|Pomelo||🍊|toronja|U:^grapefruit, raw, pink and red, all areas
+frut|Aguacate||🥑|palta|U:^avocados, raw, all commercial varieties
+frut|Coco fresco||🥥||U:^nuts, coconut meat, raw
+frut|Caqui|||persimon|U:^persimmons, japanese, raw
+frut|Chirimoya||||U:^cherimoya, raw
+frut|Dátiles||||U:^dates, deglet noor
+frut|Pasas||🍇|uvas pasas|U#9298
+frut|Orejones (albaricoque seco)||🍑||U:^apricots, dried, sulfured, uncooked
+frut|Ciruelas pasas||||U:^plums, dried (prunes), uncooked
+frut|Higos secos||||U:^figs, dried, uncooked
+frut|Piña en su jugo (lata)||🍍|conserva|U:^pineapple, canned, juice pack, solids and liquids
+frut|Melocotón en almíbar||🍑|conserva|U:^peaches, canned, light syrup pack, solids and liquids
+frut|Compota de manzana (sin azúcar)||🍎|pure de manzana|U:^applesauce, canned, unsweetened, without added ascorbic acid
+seco|Almendras||🌰||U:^nuts, almonds
+seco|Nueces||🌰||U:^nuts, walnuts, english
+seco|Avellanas||🌰||U:^nuts, hazelnuts or filberts
+seco|Anacardos||🥜||U:^nuts, cashew nuts, raw
+seco|Pistachos||🥜||U:^nuts, pistachio nuts, raw
+seco|Cacahuetes|crudos|🥜|mani|U:^peanuts, all types, raw
+seco|Cacahuetes tostados con sal||🥜|mani|U:^peanuts, all types, dry-roasted, with salt
+seco|Crema de cacahuete||🥜|mantequilla de cacahuete,mani|U:^peanut butter, smooth style, without salt
+seco|Crema de almendras||🌰||U:^nuts, almond butter, plain, without salt added
+seco|Pipas de girasol (peladas)||🌻|semillas|U:^seeds, sunflower seed kernels, dried
+seco|Pipas de calabaza (peladas)||🎃|semillas|U:^seeds, pumpkin and squash seed kernels, dried
+seco|Semillas de chía||||U:^seeds, chia seeds, dried
+seco|Semillas de lino|||linaza|U:^seeds, flaxseed
+seco|Sésamo|||ajonjoli|U:^seeds, sesame seeds, whole, dried
+seco|Tahini|||pasta de sesamo|U:^seeds, sesame butter, tahini, from roasted and toasted kernels
+seco|Piñones||🌰||U:^nuts, pine nuts, dried
+seco|Nueces de macadamia||🌰||U:^nuts, macadamia nuts, raw
+seco|Nueces de Brasil||🌰||U:^nuts, brazilnuts, dried, unblanched
+seco|Nueces pecanas||🌰||U:^nuts, pecans
+seco|Castañas|crudas|🌰||U:^nuts, chestnuts, european, raw, peeled
+seco|Castañas|asadas|🌰||U:^nuts, chestnuts, european, roasted
+seco|Coco rallado||🥥||U:^nuts, coconut meat, dried (desiccated), not sweetened
+seco|Mezcla de frutos secos||🥜|cocktail|U:^nuts, mixed nuts, dry roasted, with peanuts, without salt added
+gras|Aceite de oliva||🫒|aove|U:^oil, olive, salad or cooking
+gras|Aceite de girasol||🌻||U#4506
+gras|Aceite de coco||🥥||U:^oil, coconut
+gras|Mantequilla||🧈||U:^butter, without salt
+gras|Margarina||🧈||U:^margarine, regular, 80% fat, composite, stick, without salt
+gras|Manteca de cerdo||🧈||U:^lard
+dulc|Chocolate negro (70–85 % cacao)||🍫||U:^chocolate, dark, 70-85% cacao solids
+dulc|Chocolate con leche||🍫||U:^candies, milk chocolate
+dulc|Chocolate blanco||🍫||U:^candies, white chocolate
+dulc|Cacao puro en polvo||🍫||U:^cocoa, dry powder, unsweetened
+dulc|Cacao soluble azucarado||🍫|colacao,nesquik|C#18101
+dulc|Crema de cacao y avellanas||🍫|nocilla,nutella|C#31032
+dulc|Azúcar||🍬||U:^sugars, granulated
+dulc|Azúcar moreno||🍬||U:^sugars, brown
+dulc|Miel||🍯||U:^honey
+dulc|Mermelada||🍓|confitura|U:^jams and preserves
+dulc|Sirope de arce||🍯||U:^syrups, maple
+dulc|Galletas tipo María||🍪||C#24001
+dulc|Galletas con pepitas de chocolate||🍪|cookies|C#24684
+dulc|Magdalenas||🧁||C#24630
+dulc|Croissant||🥐|cruasan|U:^croissants, butter
+dulc|Napolitana de chocolate||🥐||C#7733
+dulc|Donut glaseado||🍩|rosquilla|U#18255
+dulc|Bizcocho de yogur||🍰|bizcocho casero|C#23588
+dulc|Turrón duro (nougat)||🍬||C#31033
+dulc|Helado||🍦||C#39515
+dulc|Natillas||🍮||C#39214
+dulc|Arroz con leche||🍮||C#39232
+dulc|Gominolas||🍬|chuches,golosinas|C#31060
+dulc|Barrita de cereales con chocolate||🍫||C#31106
+dulc|Patatas chips (bolsa)||🥔|papas|C#4004
+dulc|Nachos (tortilla chips)||🌽|doritos|C#38105
+bebi|Café solo||☕||U:^beverages, coffee, brewed, prepared with tap water
+bebi|Café con leche||☕|capuchino,cappuccino|C#18151
+bebi|Zumo de naranja natural||🧃|jugo|U:^orange juice, raw
+bebi|Zumo de manzana (envasado)||🧃|jugo|U:^apple juice, canned or bottled, unsweetened, without added ascorbic acid
+bebi|Refresco de cola||🥤|coca cola,pepsi|U#14148
+bebi|Refresco de cola sin azúcar||🥤|zero,light|U#14416
+bebi|Refresco de naranja||🥤|fanta|U:^beverages, carbonated, orange
+bebi|Tónica||🥤||U:^beverages, carbonated, tonic water
+bebi|Bebida energética||🥤|red bull,monster|C#18352
+bebi|Bebida isotónica||🥤|aquarius,powerade|C#18350
+bebi|Cerveza||🍺|caña|U:^alcoholic beverage, beer, regular, all
+bebi|Vino tinto||🍷||U:^alcoholic beverage, wine, table, red
+bebi|Vino blanco||🥂||U:^alcoholic beverage, wine, table, white
+bebi|Destilados (ron, ginebra, whisky, vodka)||🥃|copa,cubata|U:^alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 80 proof
+bebi|Bebida de soja (sin azúcar)||🥛|leche de soja|C#18900
+bebi|Bebida de almendra||🥛|leche de almendra|C#18107
+bebi|Bebida de arroz||🥛|leche de arroz|U#14639
+sals|Puré de tomate (passata)||🥫|tomate tamizado,concentrado|C#20170
+sals|Kétchup||🍅|ketchup|U:^catsup
+sals|Mostaza||||U:^mustard, prepared, yellow
+sals|Mayonesa|||mahonesa|C#11054
+sals|Mayonesa ligera|||mahonesa light|C#11079
+sals|Alioli||🧄|ajoaceite|C#11168
+sals|Salsa de soja||||U:^soy sauce made from soy and wheat (shoyu)
+sals|Vinagre de vino||||U:^vinegar, red wine
+sals|Vinagre balsámico|||modena|U:^vinegar, balsamic
+sals|Pesto||🌿||C#11179
+sals|Salsa barbacoa||||U:^sauce, barbecue
+sals|Bechamel||||C#11143
+sals|Caldo de pollo||🍲||U:^soup, stock, chicken, home-prepared
+plat|Tortilla de patatas (con cebolla)||🍳|tortilla española|C#22510
+plat|Gazpacho||🍅||C#25967
+plat|Paella||🥘|arroz|C#25031
+plat|Pizza (media)||🍕||C#25516
+plat|Pizza de jamón y queso||🍕||C#25435
+plat|Hamburguesa con pan (comida rápida)||🍔|burger|C#25413
+plat|Hamburguesa con queso (comida rápida)||🍔|cheeseburger|C#25414
+plat|Kebab en pan de pita||🥙|durum|C#25428
+plat|Bocadillo de jamón cocido y queso||🥪|sandwich mixto|C#25485
+plat|Lasaña de verduras||🍝|canelones|C#25218
+plat|Crema de calabaza||🍲|pure,sopa|C#25945
+plat|Crema de puerro y patata||🍲|pure,sopa,vichyssoise|C#25907
+plat|Pasta a la boloñesa||🍝|espaguetis,macarrones|C#25085
+plat|Pasta a la carbonara||🍝|espaguetis|C#25135
+plat|Arroz tres delicias||🍚|arroz frito|C#25088
+plat|Nuggets de pollo||🍗||C#25512
+plat|Chili con carne||🌶️||C#25111
+plat|Fajitas||🌯||C#25460
+plat|Burrito||🌯||C#25459
+plat|Cuscús con carne||🍲||C#25152
+plat|Quiche lorraine||🥧||C#25405
+plat|Sushi / maki||🍣||C#25456
+plat|Musaka||🍆||C#25123
+supl|Proteína de suero (whey) en polvo||🥤|batido,proteina|U#14066
+supl|Proteína de soja aislada en polvo||🥤|batido,proteina|U#16122
