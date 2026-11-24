@@ -189,16 +189,16 @@
   /** Lo que queda del día según el objetivo y lo apuntado, o null si no hay objetivo del día. */
   function quedaDia() { const md = metaDia(); return md ? C.queda(md, C.sumaDia(comidasHoy())) : null; }
   /** La comida del plan que toca ahora y su parte de lo que queda. null si no hay plan, no queda ninguna o ya no hay qué repartir. */
-  function cuotaAhora() {
+  function cuotaAhora(tam) {
     const x = quedaDia(); if (!x || C.estadoDia(metaDia(), C.sumaDia(comidasHoy())).hecho) return null;      // con el día ya cubierto no se reparten migajas
     const toca = C.comidaQueToca(S.meta.comidas, comidasHoy().map((c) => c.nombre), horaAhora()); if (!toca) return null;
-    const c = C.cuota(x.queda, toca.quedan);
+    const c = C.cuota(x.queda, toca.quedan, tam);
     return c.p + c.h + c.g >= 5 ? { nombre: toca.nombre, quedan: toca.quedan, objetivo: { p: c.p, h: c.h, g: c.g } } : null;
   }
   /** Un plato nuevo: con plan, la comida que toca ya con sus macros; con todo hecho, apuntar en gramos; sin plan, la calculadora. */
   function nuevoPlato() {
     const c = cuotaAhora();
-    S.plato = c ? { items: [], modo: 'macros', objetivo: c.objetivo, ejemplo: false, comida: c.nombre, auto: true }
+    S.plato = c ? { items: [], modo: 'macros', objetivo: c.objetivo, ejemplo: false, comida: c.nombre, auto: true, tam: 'normal' }
       : { items: [], modo: metaDia() ? 'gramos' : 'macros', objetivo: null, ejemplo: false, comida: null };
     if (S.plato.modo === 'macros' && !S.plato.objetivo) S.plato.objetivo = objetivoInicial();
     platoTocado = false;
@@ -207,7 +207,7 @@
   function alDia() {
     const P = S.plato;
     if (!P.items.length && !P.cambia && !platoTocado) { nuevoPlato(); guardar(); return; }
-    if (P.auto) { const c = cuotaAhora(); if (c && c.nombre === P.comida) P.objetivo = c.objetivo; else if (!metaDia()) P.auto = false; }
+    if (P.auto) { const c = cuotaAhora(P.tam); if (c && c.nombre === P.comida) P.objetivo = c.objetivo; else if (!metaDia()) P.auto = false; }
     if (P.modo === 'macros' && !P.objetivo) P.objetivo = objetivoInicial();
   }
   const VERBO = { 'Desayuno': 'desayunar', 'Comida': 'comer', 'Merienda': 'merendar', 'Cena': 'cenar' };
@@ -256,15 +256,19 @@
 
   /** El rótulo de los tres campos: «Comida: te tocan» si lo pone el plan; «En este plato quiero» si los números son tuyos. */
   function htmlRotulo() {
-    const P = S.plato;
-    return `<h3>${P.auto && P.comida ? `<b>${esc(P.comida)}:</b> te tocan` : 'En este plato quiero'}</h3> <span class="obj-kcal" id="obj-kcal"></span>`;
+    const P = S.plato, n = esc(P.comida || ''), t = P.tam;
+    const txt = !(P.auto && P.comida) ? 'En este plato quiero'
+      : t === 'todo' ? `<b>${n}:</b> todo lo que te queda` : `<b>${n}${t === 'suave' ? ' suave' : t === 'fuerte' ? ' fuerte' : ''}:</b> te tocan`;
+    return `<h3>${txt}</h3> <span class="obj-kcal" id="obj-kcal"></span>`;
   }
-  /** Los atajos de debajo de los campos. Sin macros del día, lo primero es calcularlos. */
+  const TAMANOS = [['suave', 'Suave'], ['normal', 'Normal'], ['fuerte', 'Fuerte'], ['todo', 'Todo']];
+  /** Debajo de los campos: el tamaño de esta comida (lo decide quien come) y «algo entre horas». Sin macros del día, lo primero es calcularlos. */
   function htmlAtajos() {
     const P = S.plato;
     if (!metaDia()) return `<div class="aviso-ej"><span>Dime tus macros del día y en cada comida te diré cuánto te toca</span> <button class="chip" data-a="ir-macros">Calcular mis macros</button></div>`;
-    const c = cuotaAhora(), b = (a, t) => `<button class="chip" data-a="${a}">${t}</button>`;
-    return `<div class="chips en-fila">${P.auto && P.comida ? (c && c.quedan > 1 ? b('obj-queda', 'Todo lo que me queda hoy') : '') : (c ? b('obj-toca', 'Lo que me toca ahora') : b('obj-queda', 'Todo lo que me queda hoy'))}${b('entre-horas', 'Algo entre horas')}</div>`;
+    const elegido = P.auto && P.comida ? (P.tam || 'normal') : null;      // con números puestos a mano no hay tamaño marcado
+    const tamanos = cuotaAhora() ? `<div class="tamanos" role="group" aria-label="Tamaño de esta comida">${TAMANOS.map(([v, t]) => `<button data-a="tam" data-v="${v}" aria-pressed="${elegido === v}">${t}</button>`).join('')}</div>` : '';
+    return tamanos + `<div class="chips"><button class="chip" data-a="entre-horas">Algo entre horas</button></div>`;
   }
   function htmlExtra() {
     const P = S.plato;
@@ -634,7 +638,7 @@
       P.modo = el.dataset.v; platoTocado = true; P.ejemplo = false;        // quien usa el ejemplo lo hace suyo: lo que añada se suma
       if (P.modo === 'macros') {
         const c = cuotaAhora();                                          // con plan, «macros» es la comida que toca
-        if (c && !P.cambia && (!P.objetivo || P.comida == null)) { P.comida = c.nombre; P.objetivo = c.objetivo; P.auto = true; }
+        if (c && !P.cambia && (!P.objetivo || P.comida == null)) { P.comida = c.nombre; P.objetivo = c.objetivo; P.auto = true; P.tam = 'normal'; }
         else if (!P.objetivo) P.objetivo = objetivoInicial();
       }
       guardar(); pintaPlato();
@@ -678,16 +682,13 @@
       nuevoPlato(); guardar(); cierra(); pintaPlato();
       toast('Plato vacío', 'Deshacer', () => { S.plato = JSON.parse(previo); platoTocado = true; guardar(); pintaPlato(); });
     },
-    'obj-toca': () => { const c = cuotaAhora(), P = S.plato; if (!c) return; P.modo = 'macros'; P.comida = c.nombre; P.objetivo = c.objetivo; P.auto = true; platoTocado = false; guardar(); pintaPlato(); },
+    /* El tamaño de esta comida: vuelve a lo que toca según el plan, en la medida elegida. */
+    tam: (el) => { const P = S.plato, c = cuotaAhora(el.dataset.v); if (!c) return; P.modo = 'macros'; P.comida = c.nombre; P.tam = el.dataset.v; P.objetivo = c.objetivo; P.auto = true; platoTocado = true; guardar(); pintaPlato(); },
+    'obj-toca': () => ACC.tam({ dataset: { v: 'normal' } }),
     'entre-horas': () => { const P = S.plato; P.modo = 'gramos'; P.comida = null; P.auto = false; platoTocado = true; guardar(); pintaPlato(); },
     'ver-ejemplo': () => { S.plato = { items: EJEMPLO.map((x) => ({ id: x.id, gramos: x.gramos })), modo: 'gramos', objetivo: null, ejemplo: true, comida: null }; platoTocado = true; guardar(); pintaPlato(); },
     'ir-macros': () => irA('macros'),
     aceptar: (el) => { const P = S.plato; P.objetivo = Object.assign({}, P.objetivo, { [el.dataset.m]: C.num(el.dataset.v) }); P.auto = false; platoTocado = true; guardar(); pintaPlato(); },
-    'obj-queda': () => {
-      const x = quedaDia(), P = S.plato; if (!x) return;
-      P.modo = 'macros'; P.objetivo = { p: Math.round(x.queda.p), h: Math.round(x.queda.h), g: Math.round(x.queda.g) }; P.auto = false; platoTocado = true;
-      guardar(); pintaPlato();
-    },
     cuadrar: () => irA('plato'),                                          // «Preparar la cena»: el plato ya sale con lo que toca
     apuntar: abreApuntar,
     'que-comida': (el) => { $$('#sheet [data-a="que-comida"]').forEach((b) => b.setAttribute('aria-pressed', String(b === el))); $('#otra-comida').value = ''; },

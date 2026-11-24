@@ -434,6 +434,20 @@ test('queda: lo que falta para el objetivo del día, nunca negativo, y aparte lo
   assert.deepEqual(q.pasa, { kcal: 0, p: 0, h: 0, g: 10 });
 });
 
+test('cuota: el tamaño lo elige quien come: suave es media ración, fuerte ración y media, todo es lo que queda', () => {
+  const queda = { p: 165, h: 235, g: 60 };
+  assert.deepEqual(Core.cuota(queda, 4, 'normal'), { p: 41, h: 59, g: 15, kcal: 535 });
+  assert.deepEqual(Core.cuota(queda, 4, 'suave'), { p: 21, h: 29, g: 8, kcal: 272 });
+  assert.deepEqual(Core.cuota(queda, 4, 'fuerte'), { p: 62, h: 88, g: 23, kcal: 807 });
+  assert.deepEqual(Core.cuota(queda, 4, 'todo'), { p: 165, h: 235, g: 60, kcal: 2140 });
+});
+
+test('cuota: una comida fuerte nunca pide más de lo que queda', () => {
+  assert.deepEqual(Core.cuota({ p: 80, h: 100, g: 20 }, 1, 'fuerte'), { p: 80, h: 100, g: 20, kcal: 900 }, 'con una sola comida por delante, fuerte = todo');
+  assert.deepEqual(Core.cuota({ p: 80, h: 100, g: 20 }, 1, 'suave'), { p: 40, h: 50, g: 10, kcal: 450 });
+  assert.deepEqual(Core.cuota({ p: 90, h: 120, g: 30 }, 2, 'fuerte'), { p: 68, h: 90, g: 23, kcal: 839 }, 'tres cuartos de lo que queda');
+});
+
 test('apuntar: guarda la comida con su nombre, su hora, sus alimentos y sus totales', () => {
   const c = Core.apuntar('Comida', new Date(2026, 10, 24, 14, 5), [{ a: Object.assign({ id: 'U1', n: 'Patata', e: 'cocida' }, patata), gramos: 300 }, { a: Object.assign({ id: 'U2', n: 'Pechuga de pollo', e: 'asada o plancha' }, pollo), gramos: 250 }]);
   assert.equal(c.nombre, 'Comida'); assert.equal(c.hora, '14:05');

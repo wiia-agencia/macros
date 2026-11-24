@@ -267,8 +267,18 @@
     var pendientes = plan.filter(function (c, i) { return hechas.indexOf(c) < 0 && (i === plan.length - 1 || HASTA[c] > hora); });
     return pendientes.length ? { nombre: pendientes[0], quedan: pendientes.length } : null;
   }
-  /** Lo que toca en una comida: lo que queda del día repartido entre las comidas que faltan. */
-  function cuota(quedaDia, quedan) { return porComida(quedaDia, Math.max(1, Math.round(num(quedan)))); }
+  /**
+   * Lo que toca en una comida: lo que queda del día repartido entre las comidas que faltan, según el tamaño que elige
+   * quien come: 'normal' (su parte), 'suave' (media parte), 'fuerte' (parte y media) o 'todo' (lo que queda).
+   * Nunca más de lo que queda: lo que no se coma ahora se reparte solo entre las comidas siguientes.
+   */
+  var TAMANOS = { suave: 0.5, normal: 1, fuerte: 1.5 };
+  function cuota(quedaDia, quedan, tam) {
+    var n = Math.max(1, Math.round(num(quedan))), f = tam === 'todo' ? n : (TAMANOS[tam] || 1);
+    var parte = function (m) { var q = num(quedaDia[m]); return Math.round(Math.min(q, q * f / n)); };
+    var p = parte('p'), h = parte('h'), g = parte('g');
+    return { p: p, h: h, g: g, kcal: 4 * p + 4 * h + 9 * g };
+  }
   /** Una comida lista para guardar: guarda también nombres y totales, para que siga igual aunque luego se borre un alimento. */
   function apuntar(nombre, fecha, items) {
     var t = totales(items);

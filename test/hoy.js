@@ -21,6 +21,7 @@ const servidor = require('./servidor.js');
   const guardado = () => p.evaluate(() => JSON.parse(localStorage.getItem('algramo.v1')));
   const objetivo = () => p.$$eval('[data-in="obj"]', (xs) => xs.map((x) => x.value));
   const chips = () => p.$$eval('#obj-chips .chip', (xs) => xs.map((x) => x.textContent.trim()));
+  const tamanos = () => p.$$eval('#obj-chips .tamanos button', (xs) => xs.map((x) => x.textContent.trim() + (x.getAttribute('aria-pressed') === 'true' ? '*' : '')));
   const modo = () => p.$eval('#modos-plato [aria-selected="true"]', (x) => x.textContent.trim());
   const pon = async (lista) => {            // añade alimentos buscándolos; la app calcula los gramos
     for (const q of lista) {
@@ -51,7 +52,7 @@ const servidor = require('./servidor.js');
   const macrosDia = () => p.$$eval('#t-dia .dia-macros .m', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
   assert.deepEqual(await macrosDia(), ['P 0 de 165', 'H 0 de 235', 'G 0 de 60'], 'los macros del día y lo que llevas');
   assert.match(await txt('#veredicto'), /Elige qué vas a desayunar/);
-  assert.deepEqual(await chips(), ['Todo lo que me queda hoy', 'Algo entre horas']);
+  assert.deepEqual(await tamanos(), ['Suave', 'Normal*', 'Fuerte', 'Todo']); assert.deepEqual(await chips(), ['Algo entre horas']);
   assert.equal(await p.locator('#btn-apuntar').isVisible(), false); paso('a las 8:10 con 4 comidas: «Desayuno: te tocan» 41 / 59 / 15 y «Hoy llevas 0 de tus 2.140 kcal»');
 
   // 3. Dices qué vas a desayunar y te pone los gramos; al apuntarlo se limpia y prepara la comida
@@ -90,17 +91,18 @@ const servidor = require('./servidor.js');
   assert.deepEqual((await comidas()).map((c) => c.split(' ')[0] + (/ 11:30$/.test(c) ? '@11:30' : '')), ['Desayuno', 'Entre@11:30']); assert.equal(await txt('#btn-cuadrar'), 'Preparar la comida');
   paso('un plátano entre horas: apuntado en gramos; la app sigue en «Comida: te tocan»');
 
-  // 5. Desde «Hoy», preparar la comida; cambiar a todo lo que queda y volver a lo que toca
+  // 5. Desde «Hoy», preparar la comida. El tamaño lo decide quien come: suave, normal, fuerte o todo lo que queda
   await p.clock.setFixedTime(new Date('2026-11-24T14:30:00+01:00'));
   await toca('#btn-cuadrar'); assert.equal(await p.locator('#p-plato.activa').count(), 1);
-  const cuota = await objetivo();
-  await toca('#obj-chips [data-a="obj-queda"]');
-  const todo = await objetivo(); assert.ok(+todo[0] > +cuota[0] * 2.5, 'todo lo que queda es unas tres veces la cuota');
-  assert.match(await txt('#obj-rotulo'), /^En este plato quiero/); assert.deepEqual(await chips(), ['Lo que me toca ahora', 'Algo entre horas']);
-  await toca('#obj-chips [data-a="obj-toca"]'); assert.deepEqual(await objetivo(), cuota); assert.match(await txt('#obj-rotulo'), /^Comida: te tocan/);
+  const cuota = (await objetivo()).map(Number), tam = async (v) => { await toca(`#obj-chips [data-a="tam"][data-v="${v}"]`); return (await objetivo()).map(Number); };
+  const todo = await tam('todo'); assert.ok(todo[0] > cuota[0] * 2.8 && todo[0] < cuota[0] * 3.2, 'todo lo que queda es unas tres veces la cuota');
+  assert.match(await txt('#obj-rotulo'), /^Comida: todo lo que te queda \d/); assert.deepEqual(await tamanos(), ['Suave', 'Normal', 'Fuerte', 'Todo*']);
+  const fuerte = await tam('fuerte'); assert.ok(Math.abs(fuerte[1] - cuota[1] * 1.5) <= 1, `fuerte ${fuerte} es vez y media de ${cuota}`); assert.match(await txt('#obj-rotulo'), /^Comida fuerte: te tocan/);
+  const suave = await tam('suave'); assert.ok(Math.abs(suave[1] - cuota[1] / 2) <= 1, `suave ${suave} es la mitad de ${cuota}`); assert.match(await txt('#obj-rotulo'), /^Comida suave: te tocan/);
+  assert.deepEqual(await tam('normal'), cuota); assert.match(await txt('#obj-rotulo'), /^Comida: te tocan/);
   await p.fill('[data-in="obj"][data-m="p"]', '70'); await p.waitForTimeout(400);
-  assert.match(await txt('#obj-rotulo'), /^En este plato quiero/, 'si escribes tú los números, deja de decir «te tocan»');
-  await toca('#obj-chips [data-a="obj-toca"]');
+  assert.match(await txt('#obj-rotulo'), /^En este plato quiero/, 'si escribes tú los números, deja de decir «te tocan»'); assert.deepEqual(await tamanos(), ['Suave', 'Normal', 'Fuerte', 'Todo'], 'y no hay tamaño marcado');
+  await tam('normal'); assert.deepEqual(await tamanos(), ['Suave', 'Normal*', 'Fuerte', 'Todo']);
   await pon(['arroz blanco cocido', 'pechuga de pollo asada', 'aceite de oliva']);
   assert.match(await txt('#veredicto'), /Clavado/); await apunta();
   assert.match(await txt('#obj-rotulo'), /^Merienda: te tocan/); paso('comida calculada con su cuota (clavada) y apuntada: ahora toca la merienda');

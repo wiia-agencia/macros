@@ -42,7 +42,7 @@ const servidor = require('./servidor.js');
   await toca(p, '[data-a="meta"][data-v="definir"]'); await p.waitForTimeout(2600);
   await p.locator('#p-macros').evaluate((el) => el.scrollTo(0, 260)); await foto(p, '10-mis-macros-definir');
   await toca(p, '[data-a="tab"][data-v="plato"]');
-  await toca(p, '[data-a="obj-toca"]'); await foto(p, '11-plato-una-comida');
+  await toca(p, '[data-a="tam"][data-v="normal"]'); await foto(p, '11-plato-una-comida');
   console.log('una comida:', await p.$$eval('[data-in="obj"]', (xs) => xs.map((x) => x.value).join('/')), '|', (await p.textContent('#veredicto')).trim().slice(0, 90), '|', await p.textContent('#t-dia'));
   await toca(p, '[data-a="modo"][data-v="gramos"]');
   await toca(p, '[data-a="aspecto"]'); await foto(p, '12-aspecto');

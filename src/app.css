@@ -191,7 +191,10 @@ h1, h2, h3, p { margin: 0; }
 h3.rotulo { display: block; margin-top: 8px; }
 .rotulo h3 b { color: var(--tinta); }
 #obj-chips .aviso-ej { margin-top: 0; }
-#obj-chips .chips.en-fila { margin: 0 -16px; padding: 0 16px 3px; }
+.tamanos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--hundido); border-radius: 14px; padding: 4px; }
+.tamanos button { height: 36px; font-weight: 700; font-size: 13.5px; color: var(--tinta-2); border-radius: 10px; transition: background .2s, color .2s; }
+.tamanos button[aria-pressed="true"] { background: var(--hoja); color: var(--tinta); box-shadow: 0 1px 2px rgb(var(--sombra) / .16), 0 4px 10px rgb(var(--sombra) / .1); }
+.tamanos + .chips { margin-top: 8px; }
 .obj-kcal { font-weight: 700; color: var(--tinta); font-variant-numeric: tabular-nums; }
 .veredicto { border-radius: 18px; padding: 13px 14px; background: var(--hundido); display: grid; gap: 9px; }
 .veredicto.bien { background: var(--accion); color: var(--accion-tinta); display: flex; align-items: center; gap: 10px; padding: 11px 14px; }
