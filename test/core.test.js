@@ -549,3 +549,57 @@ test('racha: días cumplidos seguidos hasta hoy; si hoy aún no está, cuenta ha
   dias['2026-11-24'] = ok; assert.deepEqual(Core.racha(dias, {}, '2026-11-24', META), { actual: 3, mejor: 3 });
   assert.deepEqual(Core.racha({}, {}, '2026-11-24', META), { actual: 0, mejor: 0 });
 });
+
+/* ── El peso ───────────────────────────────────── */
+test('peso: uno por día y ordenado por fecha; el del mismo día se sustituye', () => {
+  let ps = Core.ponPeso([], '2026-11-10', 78.44);
+  ps = Core.ponPeso(ps, '2026-11-03', '79,1');
+  ps = Core.ponPeso(ps, '2026-11-10', 78);
+  assert.deepEqual(ps, [{ f: '2026-11-03', kg: 79.1 }, { f: '2026-11-10', kg: 78 }]);
+});
+test('peso: un valor imposible no se apunta y la lista que llega no se toca', () => {
+  const antes = [{ f: '2026-11-03', kg: 79.1 }];
+  for (const malo of [0, 8, 29.9, 301, 'abc', '', null]) assert.deepEqual(Core.ponPeso(antes, '2026-11-10', malo), antes, String(malo));
+  const despues = Core.ponPeso(antes, '2026-11-10', 78);
+  assert.equal(antes.length, 1); assert.equal(despues.length, 2);
+  assert.deepEqual(Core.ponPeso(null, '2026-11-10', 78), [{ f: '2026-11-10', kg: 78 }], 'sin lista previa');
+});
+test('peso: quitar el de un día', () => {
+  const ps = [{ f: '2026-11-03', kg: 79.1 }, { f: '2026-11-10', kg: 78 }];
+  assert.deepEqual(Core.quitaPeso(ps, '2026-11-03'), [{ f: '2026-11-10', kg: 78 }]);
+  assert.deepEqual(Core.quitaPeso(ps, '2026-11-04'), ps);
+});
+test('peso: el cambio va del primero al último, con los días que han pasado', () => {
+  assert.equal(Core.cambioPeso([]), null);
+  assert.equal(Core.cambioPeso([{ f: '2026-11-24', kg: 76.9 }]), null);
+  assert.deepEqual(Core.cambioPeso([{ f: '2026-09-29', kg: 79.8 }, { f: '2026-10-20', kg: 78.6 }, { f: '2026-11-24', kg: 76.9 }]), { kg: -2.9, dias: 56 });
+  assert.deepEqual(Core.cambioPeso([{ f: '2026-11-20', kg: 70 }, { f: '2026-11-24', kg: 70.4 }]), { kg: 0.4, dias: 4 });
+});
+test('plazo: se dice en días, semanas o meses', () => {
+  assert.equal(Core.plazo(1), '1 día');
+  assert.equal(Core.plazo(5), '5 días');
+  assert.equal(Core.plazo(13), '13 días');
+  assert.equal(Core.plazo(14), '2 semanas');
+  assert.equal(Core.plazo(56), '8 semanas');
+  assert.equal(Core.plazo(62), '9 semanas');
+  assert.equal(Core.plazo(70), '2 meses');
+  assert.equal(Core.plazo(365), '12 meses');
+});
+test('gráfica del peso: la fecha manda en horizontal y el peso más alto queda arriba', () => {
+  const pts = Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-11', kg: 78 }, { f: '2026-11-21', kg: 79 }], 300, 100, 10);
+  assert.deepEqual(pts.map((p) => [p.x, p.y]), [[10, 10], [150, 90], [290, 50]]);
+  assert.deepEqual(pts.map((p) => [p.f, p.kg]), [['2026-11-01', 80], ['2026-11-11', 78], ['2026-11-21', 79]]);
+  const desigual = Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-02', kg: 80 }, { f: '2026-11-21', kg: 78 }], 300, 100, 10);
+  assert.deepEqual(desigual.map((p) => p.x), [10, 24, 290], 'dos días seguidos quedan juntos');
+});
+test('gráfica del peso: si el peso no cambia, la línea va por el medio; con un solo punto, en el centro', () => {
+  assert.deepEqual(Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-11', kg: 80 }], 300, 100, 10).map((p) => [p.x, p.y]), [[10, 50], [290, 50]]);
+  assert.deepEqual(Core.trazoPeso([{ f: '2026-11-01', kg: 80 }], 300, 100, 10).map((p) => [p.x, p.y]), [[150, 50]]);
+  assert.deepEqual(Core.trazoPeso([], 300, 100, 10), []);
+});
+test('gráfica del peso: con un rango mínimo, dos décimas de diferencia no parecen una caída', () => {
+  const pts = Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-11', kg: 80.2 }], 300, 100, 10, 2);
+  assert.deepEqual(pts.map((p) => p.y), [54, 46], 'el rango se abre a 2 kg alrededor del centro');
+  const amplio = Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-11', kg: 76 }], 300, 100, 10, 2);
+  assert.deepEqual(amplio.map((p) => p.y), [10, 90], 'si el cambio ya es mayor, ocupa toda la caja');
+});

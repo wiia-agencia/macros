@@ -374,6 +374,49 @@
     return out;
   }
 
+  /* ── El peso ──────────────────────────────────────
+   * Una lista [{ f: 'AAAA-MM-DD', kg }], un peso por día y ordenada por fecha. Las funciones devuelven una lista nueva. */
+  function diasEntre(a, b) { return Math.round((fechaDe(b) - fechaDe(a)) / 864e5); }
+  /** Apunta el peso de un día; si ese día ya tenía, lo sustituye. Un peso imposible (fuera de 30–300 kg) no se apunta. */
+  function ponPeso(pesos, clave, kg) {
+    var lista = (pesos || []).slice(), v = Math.round(num(kg) * 10) / 10;
+    if (!(v >= 30 && v <= 300)) return lista;
+    lista = lista.filter(function (x) { return x.f !== clave; });
+    lista.push({ f: clave, kg: v });
+    return lista.sort(function (a, b) { return a.f < b.f ? -1 : a.f > b.f ? 1 : 0; });
+  }
+  /** Quita el peso apuntado un día. */
+  function quitaPeso(pesos, clave) { return (pesos || []).filter(function (x) { return x.f !== clave; }); }
+  /** Cuánto ha cambiado el peso del primero al último y en cuántos días; null si no hay dos. */
+  function cambioPeso(pesos) {
+    if (!pesos || pesos.length < 2) return null;
+    var a = pesos[0], b = pesos[pesos.length - 1];
+    return { kg: Math.round((b.kg - a.kg) * 10) / 10, dias: diasEntre(a.f, b.f) };
+  }
+  /** Un plazo dicho como se dice: «5 días», «8 semanas», «4 meses». */
+  function plazo(dias) {
+    var d = Math.max(1, Math.round(num(dias))), n;
+    if (d < 14) return d + (d === 1 ? ' día' : ' días');
+    if (d < 63) { n = Math.round(d / 7); return n + ' semanas'; }
+    n = Math.round(d / 30.44); return n + (n === 1 ? ' mes' : ' meses');
+  }
+  /**
+   * Los puntos de la gráfica del peso dentro de una caja de ancho × alto con su margen: la fecha manda en horizontal
+   * y el peso en vertical (el más alto, arriba). Si el peso no cambia va por el medio; un punto solo, en el centro.
+   * `rangoMin` (kg): lo mínimo que abarca la caja de arriba abajo, para que dos décimas no parezcan una caída.
+   */
+  function trazoPeso(pesos, ancho, alto, margen, rangoMin) {
+    var ps = pesos || [], n = ps.length; if (!n) return [];
+    var m = num(margen), total = diasEntre(ps[0].f, ps[n - 1].f);
+    var min = Math.min.apply(null, ps.map(function (x) { return x.kg; })), max = Math.max.apply(null, ps.map(function (x) { return x.kg; }));
+    if (max > min && max - min < num(rangoMin)) { var c = (max + min) / 2; min = c - num(rangoMin) / 2; max = c + num(rangoMin) / 2; }
+    return ps.map(function (x) {
+      var px = total > 0 ? m + (ancho - 2 * m) * diasEntre(ps[0].f, x.f) / total : ancho / 2;
+      var py = max > min ? m + (alto - 2 * m) * (max - x.kg) / (max - min) : alto / 2;
+      return { x: Math.round(px * 10) / 10, y: Math.round(py * 10) / 10, f: x.f, kg: x.kg };
+    });
+  }
+
   function redondear5(x) { return Math.round(x / 5) * 5; }
 
   /**
@@ -487,7 +530,7 @@
   var Core = {
     KCAL: KCAL, num: num, macros: macros, totales: totales, reparto: reparto, redondear: redondear, resolver: resolver,
     esAcompanamiento: esAcompanamiento, fijados: fijados, masAporta: masAporta, sugerir: sugerir, objetivos: objetivos, porComida: porComida, norm: norm, buscar: buscar, proteinaPorCaloria: proteinaPorCaloria, fmt: fmt,
-    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, fechaDe: fechaDe, otroDia: otroDia, ultimosDias: ultimosDias, diasDelMes: diasDelMes, cumple: cumple, calendario: calendario, racha: racha, podarDias: podarDias
+    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, fechaDe: fechaDe, otroDia: otroDia, ultimosDias: ultimosDias, diasDelMes: diasDelMes, cumple: cumple, calendario: calendario, racha: racha, podarDias: podarDias, ponPeso: ponPeso, quitaPeso: quitaPeso, cambioPeso: cambioPeso, plazo: plazo, trazoPeso: trazoPeso
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core; else root.Core = Core;
 })(typeof self !== 'undefined' ? self : this);

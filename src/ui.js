@@ -49,7 +49,7 @@
   S.dias = C.podarDias(S.dias && typeof S.dias === 'object' ? S.dias : {}, 400);  // lo apuntado cada día (se guarda algo más de un año)
   S.metas = S.metas && typeof S.metas === 'object' ? S.metas : {};                 // el objetivo que tenía cada día
   Object.keys(S.metas).forEach((k) => { if (!S.dias[k]) delete S.metas[k]; });
-  S.pesos = Array.isArray(S.pesos) ? S.pesos : [];                                 // el peso apuntado: [{ f: 'AAAA-MM-DD', kg }]
+  S.pesos = (Array.isArray(S.pesos) ? S.pesos : []).reduce((l, x) => (x && /^\d{4}-\d\d-\d\d$/.test(x.f) ? C.ponPeso(l, x.f, x.kg) : l), []);   // el peso apuntado: [{ f: 'AAAA-MM-DD', kg }]
   let tGuardar = 0;
   const guardaYa = () => { clearTimeout(tGuardar); tGuardar = 0; try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) { /* nada */ } };
   const guardar = () => { clearTimeout(tGuardar); tGuardar = setTimeout(guardaYa, 250); };
@@ -648,7 +648,7 @@
     if (M.modo === 'mano') {
       const campo = (m) => `<label class="campo-m" data-m="${m}"><span>${NOMBRE[m]}</span><div><input inputmode="numeric" pattern="[0-9]*" maxlength="3" data-in="mano" data-m="${m}" value="${M.mano[m] == null ? '' : M.mano[m]}" placeholder="0" aria-label="${NOMBRE[m]} al día, en gramos"><em>g</em></div></label>`;
       el.innerHTML = `<p class="nota" style="margin:16px 4px 10px">Pon los gramos al día que te haya dado tu entrenador o tu nutricionista.</p>
-        <div class="obj-campos">${MAC.map(campo).join('')}</div><p class="subtitulo" id="mano-kcal"></p><div id="comidas">${htmlComidas()}</div>`;
+        <div class="obj-campos">${MAC.map(campo).join('')}</div><p class="subtitulo" id="mano-kcal"></p><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div>`;
       pintaManoKcal(); return;
     }
     const n = NIVELES[p.nivel - 1];
@@ -660,11 +660,73 @@
       </div>
       ${p.ejemplo ? `<p class="nota" id="nota-ej">Son datos de ejemplo: cámbialos por los tuyos.</p>` : ''}
       <h2 class="subtitulo">Elige lo que buscas</h2>
-      <div id="metas">${htmlMetas()}</div><div id="comidas">${htmlComidas()}</div>${COMO}`;
+      <div id="metas">${htmlMetas()}</div><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div>${COMO}`;
     ponModos('#modos-sexo', p.sexo === 'm' ? 1 : 0);
   }
   function pintaManoKcal() { const md = metaDia(), el = $('#mano-kcal'); if (el) el.textContent = md ? `En total, ${F(md.kcal)} kcal al día` : 'Rellena los tres para empezar'; }
   function refrescaMetas() { const m = $('#metas'); if (m) m.innerHTML = htmlMetas(); const c = $('#comidas'); if (c) c.innerHTML = htmlComidas(); }
+
+  /* ── El peso ───────────────────────────────────── */
+  const MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  /** «hoy», «ayer» o «17 nov» (con el año si no es este). */
+  function diaCorto(k) {
+    const hoy = claveHoy();
+    if (k === hoy) return 'hoy';
+    if (k === C.otroDia(hoy, -1)) return 'ayer';
+    const f = C.fechaDe(k);
+    return `${f.getDate()} ${MES3[f.getMonth()]}` + (k.slice(0, 4) !== hoy.slice(0, 4) ? ' ' + k.slice(0, 4) : '');
+  }
+  const elDia = (k) => { const d = diaCorto(k); return /^\d/.test(d) ? 'el ' + d : d; };       // «el 17 nov», «ayer», «hoy»
+  const kilos = (v) => F(v, 1) + ' kg';
+  const PESOS_VISTOS = 30;                               // la gráfica y el resumen miran los últimos pesos apuntados
+  const fraseCambio = (c) => (c.kg === 0 ? `Igual que hace ${C.plazo(c.dias)}` : `${kilos(Math.abs(c.kg))} ${c.kg < 0 ? 'menos' : 'más'} en ${C.plazo(c.dias)}`);
+  /** La fila de «Mis macros»: el último peso y cómo va; al tocarla se abre la hoja. */
+  function htmlFilaPeso() {
+    const ps = S.pesos, u = ps[ps.length - 1], c = C.cambioPeso(ps.slice(-PESOS_VISTOS));
+    const sub = !u ? 'Apúntalo de vez en cuando y verás cómo va.' : c ? fraseCambio(c) : `Apuntado ${elDia(u.f)}`;
+    return `<button class="linea-dato toca" data-a="peso"><span><b>${u ? `Mi peso: ${kilos(u.kg)}` : 'Mi peso'}</b> <small>${sub}</small></span><span class="pildora">${u && u.f === claveHoy() ? 'Ver' : 'Apuntar'}</span></button>`;
+  }
+  let trazo = [];                                        // los puntos de la gráfica abierta, para leerlos al tocarla
+  const G_ANCHO = 340, G_ALTO = 104, G_AIRE = 24;        // la caja de la línea y el aire de arriba para los rótulos
+  function htmlPeso() {
+    const hoy = claveHoy(), ps = S.pesos, u = ps[ps.length - 1], vistos = ps.slice(-PESOS_VISTOS), c = C.cambioPeso(vistos);
+    const propone = u ? u.kg : (S.perfil.ejemplo ? 0 : S.perfil.peso);
+    let h = `<div class="kg-pon"><label class="kg-campo"><input id="kg-in" inputmode="decimal" maxlength="5" value="${propone ? F(propone, 1) : ''}" placeholder="0,0" aria-label="Tu peso de hoy, en kilos"><em>kg</em></label>
+      <button class="btn" data-a="peso-apuntar">${u && u.f === hoy ? 'Cambiar el peso de hoy' : 'Apuntar el peso de hoy'}</button></div>`;
+    trazo = [];
+    if (c) {
+      trazo = C.trazoPeso(vistos, G_ANCHO, G_ALTO, 14, 2);              // la caja abarca 2 kg como poco
+      const a = trazo[0], z = trazo[trazo.length - 1], muchos = trazo.length > 12;
+      h += `<p class="kg-resumen" id="kg-resumen">${fraseCambio(c)}</p>
+        <svg id="kg-grafica" viewBox="0 0 ${G_ANCHO} ${G_ALTO + G_AIRE}" role="img" aria-label="Tu peso: de ${kilos(a.kg)} ${elDia(a.f)} a ${kilos(z.kg)} ${elDia(z.f)}">
+          <g transform="translate(0 ${G_AIRE})">
+            <line class="kg-guia" id="kg-guia" x1="0" x2="0" y1="${-G_AIRE + 4}" y2="${G_ALTO}" hidden></line>
+            <polyline class="kg-linea" points="${trazo.map((p) => p.x + ',' + p.y).join(' ')}"></polyline>
+            ${trazo.map((p, i) => `<circle class="kg-pt${muchos && i < trazo.length - 1 ? ' chico' : ''}" cx="${p.x}" cy="${p.y}" r="${i === trazo.length - 1 ? 5 : muchos ? 2.5 : 4}"></circle>`).join('')}
+            <circle class="kg-sel" id="kg-sel" r="6.5" hidden></circle>
+            <text class="kg-rot" x="${a.x - 6}" y="${a.y - 11}">${F(a.kg, 1)}</text><text class="kg-rot fin" x="${z.x + 6}" y="${z.y - 12}" text-anchor="end">${F(z.kg, 1)}</text>
+          </g></svg>
+        <p class="kg-lectura" id="kg-lectura">${`De ${elDia(a.f)} a ${elDia(z.f)}`.replace('De el', 'Del').replace('a el', 'al')}</p>`;
+    }
+    if (ps.length) h += `<div class="kg-lista">` + ps.slice().reverse().map((x) =>
+      `<div class="kg-fila"><span>${capital(diaCorto(x.f))}</span> <b>${kilos(x.kg)}</b> <button data-a="peso-quitar" data-f="${x.f}" aria-label="Borrar el peso de ${elDia(x.f)}">${ICO.x}</button></div>`).join('') + `</div>`;
+    return h;
+  }
+  function abrePeso() { abre(h2('Mi peso'), `<div id="kg-cuerpo">${htmlPeso()}</div>`); }
+  /** Tras apuntar o borrar un peso: la hoja (si sigue abierta) y la pantalla de detrás, que también lo enseña. */
+  function pintaPeso() { const el = $('#kg-cuerpo'); if (el) el.innerHTML = htmlPeso(); if (pestana === 'macros') pintaMacros(); }
+  /** Al tocar o pasar por la gráfica: marca el peso más cercano y lo dice debajo. */
+  function leePeso(e) {
+    const g = e.target.closest && e.target.closest('#kg-grafica'); if (!g || !trazo.length) return;
+    const r = g.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * G_ANCHO;
+    const p = trazo.reduce((m, q) => (Math.abs(q.x - x) < Math.abs(m.x - x) ? q : m), trazo[0]);
+    const guia = $('#kg-guia'), sel = $('#kg-sel');
+    guia.setAttribute('x1', p.x); guia.setAttribute('x2', p.x); guia.removeAttribute('hidden');
+    sel.setAttribute('cx', p.x); sel.setAttribute('cy', p.y); sel.removeAttribute('hidden');
+    $('#kg-lectura').innerHTML = `<b>${capital(diaCorto(p.f))}:</b> ${kilos(p.kg)}`;
+  }
+  document.addEventListener('pointerdown', leePeso);
+  document.addEventListener('pointermove', leePeso);
 
   /* ── Navegación y aspecto ──────────────────────── */
   const TABS = ['plato', 'alimentos', 'hoy', 'macros'];
@@ -695,6 +757,20 @@
     tab: (el) => { if (el.dataset.v === 'hoy') diaVisto = null; irA(el.dataset.v); },
     'ver-dia': (el) => { const k = el.dataset.k, hoy = claveHoy(); if (k > hoy) return; diaVisto = k === hoy ? null : k; cierra(); pintaHoy(); $('#p-hoy').scrollTop = 0; },
     mes: abreMes,
+    peso: abrePeso,
+    'peso-apuntar': () => {
+      const el = $('#kg-in'), v = Math.round(C.num(el.value) * 10) / 10;
+      if (!(v >= 30 && v <= 300)) { toast('Pon un peso entre 30 y 300 kg'); el.focus(); return; }
+      S.pesos = C.ponPeso(S.pesos, claveHoy(), v); S.perfil.peso = v; guardar(); pintaPeso();
+      toast(`Peso de hoy apuntado: ${kilos(v)}`);
+    },
+    'peso-quitar': (el) => {
+      const previo = JSON.stringify({ pesos: S.pesos, peso: S.perfil.peso });
+      S.pesos = C.quitaPeso(S.pesos, el.dataset.f);
+      const u = S.pesos[S.pesos.length - 1]; if (u) S.perfil.peso = u.kg;        // el cálculo usa el último peso que queda
+      guardar(); pintaPeso();
+      toast('Peso borrado', 'Deshacer', () => { const x = JSON.parse(previo); S.pesos = x.pesos; S.perfil.peso = x.peso; guardar(); pintaPeso(); });
+    },
     'mes-ir': (el) => { const v = el.dataset.v.split('-').map(Number); pintaMes(v[0], v[1]); },
     cerrar: cierra,
     toast: () => { const f = accionToast; accionToast = null; $('#toast').classList.remove('visto'); if (f) f(); },
@@ -850,7 +926,11 @@
     q: (el) => { FIL[el.dataset.k].q = el.value; pintaLista(el.dataset.k); },
     otra: (el) => { if (el.value.trim()) $$('#sheet [data-a="que-comida"]').forEach((b) => b.setAttribute('aria-pressed', 'false')); },
     orden: (el) => { FIL[el.dataset.k].orden = el.value; pintaLista(el.dataset.k); },
-    perfil: (el) => { S.perfil[el.dataset.k] = C.num(el.value); S.perfil.ejemplo = false; guardar(); refrescaMetas(); const n = $('#nota-ej'); if (n) n.remove(); },
+    perfil: (el) => {
+      S.perfil[el.dataset.k] = C.num(el.value); S.perfil.ejemplo = false;
+      if (el.dataset.k === 'peso') { S.pesos = C.ponPeso(S.pesos, claveHoy(), S.perfil.peso); $('#fila-peso').innerHTML = htmlFilaPeso(); }   // el peso es uno: también queda apuntado hoy
+      guardar(); refrescaMetas(); const n = $('#nota-ej'); if (n) n.remove();
+    },
     nivel: (el) => { S.perfil.nivel = +el.value; S.perfil.ejemplo = false; const n = NIVELES[S.perfil.nivel - 1]; $('#act-n').textContent = n.n; $('#act-d').textContent = n.d; guardar(); refrescaMetas(); const x = $('#nota-ej'); if (x) x.remove(); },
     mano: (el) => { el.value = el.value.replace(/\D/g, ''); S.meta.mano[el.dataset.m] = el.value === '' ? null : C.num(el.value); guardar(); pintaManoKcal(); $('#comidas').innerHTML = htmlComidas(); }
   };
