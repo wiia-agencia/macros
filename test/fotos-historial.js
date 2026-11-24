@@ -1,4 +1,5 @@
-// Capturas del historial y del peso con un mes de datos de verdad: las comidas se calculan con la propia calculadora.
+// Capturas de lo nuevo (tamaño de la comida, historial y peso) con un mes de datos de verdad: las comidas se calculan
+// con la propia calculadora. Uso: node test/fotos-historial.js [tamano|historial|peso]
 const { chromium } = require('/opt/npm-tools/node_modules/playwright');
 const path = require('path');
 const fs = require('fs');
@@ -71,6 +72,19 @@ function sembrar(hoy) {
   for (const esquema of ['light', 'dark']) {
     const s = esquema === 'light' ? '' : '-osc';
     const p = await nueva(esquema);
+    if (quiere === 'todo' || quiere === 'tamano') {              // el tamaño de la comida: los mismos alimentos, más o menos cantidad
+      for (const q of ['pan integral', 'atun al natural', 'aceite de oliva']) {
+        await toca(p, '[data-a="anadir"]'); await p.fill('#sheet input[type="search"]', q); await p.waitForTimeout(300);
+        await toca(p, '#lista-elegir [data-a="alternar"]'); await toca(p, '#sheet [data-a="cerrar"]');
+      }
+      const gramos = () => p.$$eval('#plato-filas .fila', (xs) => xs.map((x) => x.querySelector('.fila-nombre').textContent.trim() + ' ' + x.querySelector('input').value + ' g').join(' · '));
+      for (const t of ['normal', 'fuerte', 'suave', 'todo']) {
+        await toca(p, `[data-a="tam"][data-v="${t}"]`); await p.waitForTimeout(2600);
+        await p.locator('#p-plato').evaluate((el) => { const r = document.querySelector('#obj-rotulo'); el.scrollTo(0, 0); el.scrollTo(0, r.getBoundingClientRect().top - el.getBoundingClientRect().top - 24); });
+        await foto(p, `t-${t}` + s); console.log('    ' + t + ':', (await p.textContent('#obj-rotulo')).replace(/\s+/g, ' ').trim(), '|', await gramos());
+      }
+      await toca(p, '[data-a="tam"][data-v="normal"]');
+    }
     if (quiere === 'todo' || quiere === 'historial') {
       await toca(p, '[data-a="tab"][data-v="hoy"]'); await foto(p, 'h-1-hoy' + s);
       console.log('    frase:', (await p.textContent('#hoy-sem-txt')).trim());

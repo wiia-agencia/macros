@@ -8,7 +8,7 @@ const servidor = require('./servidor.js');
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   const errores = [];
   const nueva = async (w, h, esquema) => {
-    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: w < 600, isMobile: w < 600, colorScheme: esquema || 'light', locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: w < 600, isMobile: w < 600, colorScheme: esquema || 'light', locale: 'es-ES', timezoneId: 'Europe/Madrid', serviceWorkers: 'block' });
     const p = await ctx.newPage(); await p.clock.setFixedTime(new Date('2026-11-24T14:00:00+01:00'));
     p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
     p.on('pageerror', (e) => errores.push('PAGEERROR ' + e.message));

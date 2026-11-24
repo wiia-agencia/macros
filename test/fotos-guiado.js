@@ -8,7 +8,7 @@ const servidor = require('./servidor.js');
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   const nueva = async (hora, opc) => {
     const o = Object.assign({ w: 390, h: 844, esquema: 'light' }, opc || {});
-    const ctx = await b.newContext({ viewport: { width: o.w, height: o.h }, deviceScaleFactor: 2, hasTouch: o.w < 600, isMobile: o.w < 600, colorScheme: o.esquema, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+    const ctx = await b.newContext({ viewport: { width: o.w, height: o.h }, deviceScaleFactor: 2, hasTouch: o.w < 600, isMobile: o.w < 600, colorScheme: o.esquema, locale: 'es-ES', timezoneId: 'Europe/Madrid', serviceWorkers: 'block' });
     const p = await ctx.newPage(); p.on('pageerror', (e) => console.log('PAGEERROR', e.message)); p.on('console', (m) => { if (m.type() === 'error') console.log('ERROR', m.text()); });
     await p.clock.setFixedTime(new Date(`2026-11-24T${hora}:00+01:00`));
     await p.goto(URL); await p.waitForTimeout(600);

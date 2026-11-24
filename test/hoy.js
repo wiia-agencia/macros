@@ -7,7 +7,7 @@ const servidor = require('./servidor.js');
 (async () => {
   const srv = await servidor(), URL = srv.url;
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', serviceWorkers: 'block' });
   const p = await ctx.newPage();
   const errores = [];
   p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
@@ -167,7 +167,7 @@ const servidor = require('./servidor.js');
 
   // 13. Un día que sigue lo que dice la app (macros clavados) no acaba en «te has pasado» por unas kcal de fibra
   const abreDia = async (t, nombres, hora) => {
-    const c2 = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+    const c2 = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', serviceWorkers: 'block' });
     const q = await c2.newPage(); q.on('pageerror', (e) => errores.push('PAGEERROR ' + e.message));
     await q.clock.setFixedTime(new Date(`2026-11-26T${hora || '22:00'}:00+01:00`));
     const ns = nombres || ['Desayuno', 'Comida', 'Merienda', 'Cena'], k = ns.length;

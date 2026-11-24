@@ -34,3 +34,6 @@ Decidido el 24 nov 2026. La tanda 1 está construida; la tanda 2 (usuarios), pen
 ## Publicación
 - `public/` es la app tal como se sirve (la genera `build.py`): una página, su manifiesto, su icono y un service worker
   que la deja abrir sin conexión. Vercel la publica al subir cambios a `main`. No se indexa en buscadores.
+- Se sirve con una política de seguridad (`vercel.json`) que solo le deja hablar con su propio servidor: hoy la app no
+  envía nada a nadie. Con usuarios (tanda 2) habrá que abrirle, y solo, la dirección de la base de datos.
+- El icono es provisional: el aro del plato repartido entre los tres macros (`src/iconos/hacer.js`).

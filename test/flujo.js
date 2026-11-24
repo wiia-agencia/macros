@@ -6,7 +6,7 @@ const servidor = require('./servidor.js');
 (async () => {
   const srv = await servidor(), URL = srv.url;
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', serviceWorkers: 'block' });
   const p = await ctx.newPage();
   await p.clock.setFixedTime(new Date('2026-11-24T14:00:00+01:00'));       // un martes a la hora de comer
   const errores = [];
