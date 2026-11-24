@@ -57,6 +57,9 @@ comida siguiente («Preparar la cena»). Lo apuntado se guarda también al salir
 - **La tira de arriba** son los últimos 7 días. Cada uno, con su marca: llena = cumplido, aro ámbar = a medias, aro
   gris = sin apuntar; hoy, un aro que se va llenando. Se toca un día y «Hoy» enseña ese día (y se puede borrar o
   cambiar una comida suya). Al tocar la fecha sale el mes entero con la cuenta y la racha.
+- **Corregir un día pasado**: «Cambiarla» lleva esa comida al plato, que avisa de cuál es («Cambiando la comida del
+  sábado 21») y no la suma a lo de hoy; al guardarla vuelve a su día, a su sitio y con su hora. «Dejarla como estaba»
+  la devuelve sin tocar.
 - **Cumplir un día** (`Core.cumple`): los tres macros entre el 90 y el 110 % del objetivo. Cada día se mide con el
   objetivo que tenía ese día (`S.metas`), no con el de ahora. Los días de antes de empezar a apuntar no cuentan.
 
@@ -104,6 +107,11 @@ el repositorio: **antes de subir, `./probar.sh`** (la vuelve a generar y la prue
   Sin conexión (o si la red tarda más de 3 segundos) sale la última guardada.
 - Para instalarla: en Android, Chrome → menú → «Añadir a pantalla de inicio»; en iPhone, Safari → Compartir →
   «Añadir a pantalla de inicio».
+- Lo apuntado vive en el almacenamiento del navegador. En iPhone conviene instalarla antes de empezar: Safari borra
+  los datos de las webs que llevan siete días de uso del navegador sin abrirse, y las apps añadidas a la pantalla de
+  inicio llevan su propia cuenta (webkit.org/blog/10218). Además, en iPhone la app instalada no comparte datos con Safari.
+- Con el teclado del móvil abierto, las hojas (añadir alimento, peso, nombre de la comida) suben lo que ocupa el
+  teclado (`visualViewport`), para que el campo no quede tapado. Está probado con un teclado simulado, no en un móvil.
 
 ## Lo siguiente
 - Usuarios con código de invitación y PIN, datos sincronizados y panel de administrador: `docs/diseno-usuarios-historial.md`.

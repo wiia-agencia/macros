@@ -47,7 +47,7 @@ const CON_HISTORIA = {
   assert.deepEqual(g.pesos, [{ f: '2026-11-24', kg: 78.4 }]); assert.equal(g.perfil.peso, 78.4);
   assert.deepEqual(await a.filas(), ['Hoy 78,4 kg']);
   assert.equal(await a.txt('[data-a="peso-apuntar"]'), 'Cambiar el peso de hoy');
-  assert.equal(await p.$('#kg-grafica'), null, 'con un solo peso no hay gráfica');
+  assert.equal(await p.locator('#kg-grafica').count(), 0, 'con un solo peso no hay gráfica');
   await a.toca('#sheet [data-a="cerrar"]');
   assert.match(await a.txt('[data-a="peso"]'), /^Mi peso: 78,4 kg Apuntado hoy/);
   assert.equal(await p.inputValue('[data-in="perfil"][data-k="peso"]'), '78,4');
@@ -111,6 +111,20 @@ const CON_HISTORIA = {
   await a.toca('[data-a="tab"][data-v="macros"]');
   assert.match(await a.txt('[data-a="peso"]'), /^Mi peso: 77 kg 2,8 kg menos en 8 semanas/);
   paso('un peso imposible no se apunta; al recargar sigue todo');
+
+  // 7b. Intro en el campo lo apunta; con el teclado abierto la hoja sube para no quedar tapada (teclado simulado)
+  await a.toca('[data-a="peso"]');
+  await p.fill('#kg-in', '76,5'); await p.press('#kg-in', 'Enter'); await p.waitForTimeout(450);
+  g = await a.guardado(); assert.equal(g.pesos[g.pesos.length - 1].kg, 76.5, 'Intro apunta el peso');
+  const alto = await p.evaluate(() => window.innerHeight);
+  await p.evaluate(() => { Object.defineProperty(window.visualViewport, 'height', { configurable: true, get: () => 444 }); window.visualViewport.dispatchEvent(new Event('resize')); });
+  await p.waitForTimeout(450);
+  assert.equal(await p.evaluate(() => Math.round(window.innerHeight - document.querySelector('#sheet').getBoundingClientRect().bottom)), alto - 444, 'la hoja queda justo encima del teclado');
+  assert.ok(await p.evaluate(() => document.querySelector('#sheet').getBoundingClientRect().top >= 0), 'y no se sale por arriba');
+  await p.evaluate(() => { delete window.visualViewport.height; window.visualViewport.dispatchEvent(new Event('resize')); });
+  await p.waitForTimeout(450);
+  assert.equal(await p.evaluate(() => Math.round(window.innerHeight - document.querySelector('#sheet').getBoundingClientRect().bottom)), 0, 'al cerrarse el teclado vuelve abajo');
+  paso('Intro apunta el peso; con el teclado abierto la hoja sube y, al cerrarse, vuelve');
 
   // 8. Un estado guardado con pesos rotos no rompe nada
   await p.context().close();

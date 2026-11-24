@@ -75,6 +75,31 @@ const ESTADO = {
   assert.equal(await p.locator('#hoy-cuerpo .comida').count(), 1); assert.equal((await guardado()).dias['2026-11-21'].length, 1); assert.equal((await guardado()).dias['2026-11-24'].length, 1, 'lo de hoy no se toca');
   await toca('#toast [data-a="toast"]'); assert.equal(await p.locator('#hoy-cuerpo .comida').count(), 2); paso('borrar una comida de otro día y deshacer');
 
+  // 5b. Cambiar una comida de otro día: el plato avisa de cuál es, se guarda en su día y en su sitio, o se deja como estaba
+  await toca('#hoy-cuerpo .comida'); await toca('#sheet [data-a="cambiar-comida"]');
+  assert.match(await txt('#plato-extra'), /Cambiando la comida del sábado 21/);
+  assert.equal(await txt('#btn-apuntar'), 'Guardar el cambio');
+  assert.doesNotMatch(await txt('#t-dia'), /con este plato/, 'ese plato no es de hoy: no se suma a lo de hoy');
+  await p.waitForTimeout(5300);                                           // se va el aviso de «Deshacer»
+  await p.fill('#plato-filas .fila input', '150'); await p.locator('#plato-filas .fila input').blur(); await p.waitForTimeout(300);
+  await toca('#btn-apuntar'); assert.equal(await txt('#sheet [data-a="apuntar-ya"]'), 'Guardar en el sábado 21');
+  await toca('#sheet [data-a="apuntar-ya"]');
+  assert.match(await txt('#toast'), /Guardada en el sábado 21: Comida/);
+  let s21 = (await guardado()).dias['2026-11-21'];
+  assert.deepEqual(s21.map((c) => [c.nombre, c.hora]), [['Comida', '14:00'], ['Cena', '21:30']], 'vuelve a su día, en su sitio y con su hora');
+  assert.equal(s21[0].items[0].gramos, 150); assert.equal((await guardado()).dias['2026-11-24'].length, 1, 'lo de hoy no se toca');
+  assert.equal(await p.locator('#plato-extra [data-a="cambio-fuera"]').count(), 0, 'el plato ya no está cambiando nada');
+  await toca('[data-a="tab"][data-v="hoy"]'); await dia('2026-11-21');
+  await p.locator('#hoy-cuerpo .comida').nth(1).click(); await p.waitForTimeout(450); await toca('#sheet [data-a="cambiar-comida"]');
+  assert.match(await txt('#plato-extra'), /Cambiando la cena del sábado 21/);
+  assert.equal((await guardado()).dias['2026-11-21'].length, 1, 'mientras se cambia, está en el plato');
+  await toca('#plato-extra [data-a="cambio-fuera"]');
+  s21 = (await guardado()).dias['2026-11-21'];
+  assert.deepEqual(s21.map((c) => [c.nombre, c.hora, c.items[0].gramos]), [['Comida', '14:00', 150], ['Cena', '21:30', 300]], '«Dejarla como estaba» la devuelve tal cual');
+  assert.equal(await txt('#hoy-titulo'), 'Sábado 21'); assert.equal(await p.locator('#hoy-cuerpo .comida').count(), 2);
+  assert.equal((await guardado()).plato.items.length, 0, 'y el plato queda limpio');
+  paso('cambiar una comida de otro día: el plato avisa, se guarda en su día y en su sitio; o se deja como estaba');
+
   // 6. Al salir de «Hoy» y volver, se ve hoy; y lo que se apunta guarda el objetivo del día
   await toca('[data-a="tab"][data-v="plato"]'); await toca('[data-a="tab"][data-v="hoy"]'); assert.equal(await txt('#hoy-titulo'), 'Hoy');
   await p.waitForTimeout(400); assert.deepEqual((await guardado()).metas['2026-11-24'], { kcal: 2140, p: 165, h: 235, g: 60 }, 'hoy guarda su objetivo');
@@ -86,6 +111,17 @@ const ESTADO = {
   await p.reload(); await p.waitForTimeout(600); await toca('[data-a="tab"][data-v="hoy"]');
   assert.deepEqual(await marcas('#hoy-semana'), ['fut', 'fut', 'apu', 'apu', 'sin', 'apu', 'ya']); assert.equal(await txt('#hoy-sem-txt'), 'Últimos 7 días: 3 apuntados y 1 sin apuntar.');
   paso('sin macros del día: la tira marca los días apuntados, sin juzgarlos');
+
+  // 8. Recién estrenada: el mes no enseña ceros, dice para qué sirve
+  await p.evaluate(() => localStorage.setItem('algramo.v1', JSON.stringify({ v: 2 })));   // sin nada apuntado (la siembra de arriba solo actúa si no hay nada guardado)
+  await p.reload(); await p.waitForTimeout(600); await toca('[data-a="tab"][data-v="hoy"]');
+  assert.deepEqual(await marcas('#hoy-semana'), ['fut', 'fut', 'fut', 'fut', 'fut', 'fut', 'ya']);
+  assert.equal(await p.isHidden('#hoy-sem-txt'), true, 'sin días apuntados no hay frase');
+  await toca('#hoy-fecha');
+  assert.equal(await p.locator('#sheet .mes-ley').count(), 0, 'sin días apuntados no hay cuenta a cero');
+  assert.match(await txt('#mes-cuerpo'), /Cuando apuntes tus comidas, aquí verás qué días cumples tus macros y tu racha\./);
+  assert.equal(await p.$$eval('#sheet .mes [data-a="ver-dia"]', (xs) => xs.length), 30);
+  paso('recién estrenada: el mes explica para qué sirve en vez de enseñar ceros');
 
   assert.deepEqual(errores, [], 'sin errores de consola');
   console.log('HISTORIAL BIEN · sin errores de consola');

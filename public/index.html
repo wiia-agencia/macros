@@ -360,9 +360,9 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
 /* Hojas emergentes */
 .velo { position: absolute; inset: 0; z-index: 10; background: rgb(8 10 14 / .5); opacity: 0; pointer-events: none; transition: opacity .25s; }
 .velo.abierto { opacity: 1; pointer-events: auto; }
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 11; max-height: 92%; display: flex; flex-direction: column; background: var(--hoja); border-radius: 28px 28px 0 0; box-shadow: 0 -20px 60px rgb(0 0 0 / .3); transform: translateY(105%); transition: transform .34s cubic-bezier(.2, .9, .25, 1); }
+.sheet { position: absolute; left: 0; right: 0; bottom: var(--teclado, 0px); z-index: 11; max-height: calc(92% - var(--teclado, 0px)); display: flex; flex-direction: column; background: var(--hoja); border-radius: 28px 28px 0 0; box-shadow: 0 -20px 60px rgb(0 0 0 / .3); transform: translateY(105%); transition: transform .34s cubic-bezier(.2, .9, .25, 1); }
 .sheet.abierto { transform: none; }
-.sheet.alta { height: 92%; }
+.sheet.alta { height: calc(92% - var(--teclado, 0px)); }
 .sheet-cab { flex: none; padding: 10px 16px 6px; }
 .sheet-cab::before { content: ''; display: block; width: 40px; height: 5px; border-radius: 99px; background: var(--linea); margin: 0 auto 12px; }
 .sheet-tit { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -1270,7 +1270,8 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
     pintaAnillo(IDS_PLATO, '#p-plato', t, P.modo === 'macros' && P.objetivo ? P.objetivo : null, 1);
     const md = metaDia(), dia = $('#t-dia'), lleva = md ? C.sumaDia(comidasHoy()) : null;
     dia.hidden = !md;                                 // el día: las calorías y, debajo, los tres macros («llevas 0 de 165»)
-    if (md) dia.innerHTML = `<span class="dia-kcal">Hoy llevas ${F(lleva.kcal)} de tus ${F(md.kcal)} kcal${t.kcal >= 0.5 ? `; con este plato, ${F(lleva.kcal + t.kcal)}.` : '.'}</span>`
+    const deHoy = !P.cambia || P.cambia.dia === claveHoy();       // una comida de otro día que se está cambiando no se suma a lo de hoy
+    if (md) dia.innerHTML = `<span class="dia-kcal">Hoy llevas ${F(lleva.kcal)} de tus ${F(md.kcal)} kcal${deHoy && t.kcal >= 0.5 ? `; con este plato, ${F(lleva.kcal + t.kcal)}.` : '.'}</span>`
       + `<span class="dia-macros">${MAC.map((m) => `<span class="m"><i class="punto ${m}"></i>${m.toUpperCase()} ${F(Math.round(lleva[m]))} de ${F(Math.round(md[m]))}</span>`).join('')}</span>`;
   }
 
@@ -1373,6 +1374,14 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
     const tamanos = cuotaAhora() ? `<div class="tamanos" role="group" aria-label="Tamaño de esta comida">${TAMANOS.map(([v, t]) => `<button data-a="tam" data-v="${v}" aria-pressed="${elegido === v}">${t}</button>`).join('')}</div>` : '';
     return tamanos + `<div class="chips"><button class="chip" data-a="entre-horas">Algo entre horas</button></div>`;
   }
+  /** «el sábado 21» (u «hoy»): el día de una comida, dicho en una frase. */
+  const elDiaDe = (k) => { if (k === claveHoy()) return 'hoy'; const f = C.fechaDe(k); return `el ${SEMANA[f.getDay()]} ${f.getDate()}`; };
+  /** Mientras se cambia una comida ya apuntada, el plato lo dice (y de qué día es) y deja volver atrás. */
+  function htmlCambio() {
+    const cam = S.plato.cambia; if (!cam) return '';
+    const cual = ARTICULO[cam.nombre] || `«${esc(cam.nombre)}»`;
+    return `<div class="aviso-ej"><span>Cambiando ${cual} ${('de ' + elDiaDe(cam.dia)).replace('de el', 'del')}</span>${cam.antes ? ' <button class="chip" data-a="cambio-fuera">Dejarla como estaba</button>' : ''}</div>`;
+  }
   function htmlExtra() {
     const P = S.plato;
     if (P.modo !== 'macros') {
@@ -1399,7 +1408,7 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
     const P = S.plato;
     ponModos('#modos-plato', P.modo === 'macros' ? 0 : 1);
     SOL = resolver();
-    $('#plato-extra').innerHTML = htmlExtra();
+    $('#plato-extra').innerHTML = htmlCambio() + htmlExtra();
     const xs = filas();
     $('#plato-filas').innerHTML = xs.map(htmlFila).join('') || (P.modo === 'macros' ? '' : `<div class="vacio"><b>Tu plato está vacío</b>Añade lo que vas a comer y verás al momento sus calorías y sus macros.</div>`);
     $('#plato-nota').textContent = !xs.length ? '' : P.modo === 'macros'
@@ -1632,9 +1641,9 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
     const racha = !r || (!r.actual && !r.mejor) ? '' : `<div class="racha">${r.actual > 1 ? `Llevas <b>${r.actual} días seguidos</b> cumpliendo.` : r.actual === 1 ? 'Llevas <b>1 día</b> cumpliendo.' : 'Ahora no llevas racha.'}${r.mejor > r.actual ? ` Tu mejor racha: ${r.mejor} días.` : ''}</div>`;
     const cuenta = (md || c.cumplido + c.medias ? [ley(c.cumplido, 'ok', c.cumplido === 1 ? 'cumplido' : 'cumplidos'), ley(c.medias, 'med', 'a medias')] : [ley(c.apuntado, 'apu', c.apuntado === 1 ? 'apuntado' : 'apuntados')]).concat([ley(c.sin, 'sin', 'sin apuntar')]);
     return { titulo: capital(MESES[m - 1]) + (a !== +hoy.slice(0, 4) ? ' ' + a : ''),
-      cuerpo: `<div class="mes-nav"><button data-a="mes-ir" data-d="-1" data-v="${ir(-1)}" aria-label="Mes anterior"${este <= primero ? ' disabled' : ''}>‹</button><p>Toca un día para ver lo que comiste.</p><button data-a="mes-ir" data-d="1" data-v="${ir(1)}" aria-label="Mes siguiente"${este >= hoy.slice(0, 7) ? ' disabled' : ''}>›</button></div>
+      cuerpo: `<div class="mes-nav"><button data-a="mes-ir" data-d="-1" data-v="${ir(-1)}" aria-label="Mes anterior"${este <= primero ? ' disabled' : ''}>‹</button><p>${con.length ? 'Toca un día para ver lo que comiste.' : 'Aún no has apuntado ningún día.'}</p><button data-a="mes-ir" data-d="1" data-v="${ir(1)}" aria-label="Mes siguiente"${este >= hoy.slice(0, 7) ? ' disabled' : ''}>›</button></div>
         <div class="mes">${'LMXJVSD'.split('').map((l) => `<small>${l}</small>`).join('')}${'<span></span>'.repeat(dm.huecos)}${cal.dias.map((d) => htmlDia(d, claveVista(), false)).join('')}</div>
-        <div class="mes-ley">${cuenta.join(' ')}</div>${racha}` };
+        ${con.length ? `<div class="mes-ley">${cuenta.join(' ')}</div>${racha}` : `<p class="nota">Cuando apuntes tus comidas, aquí verás qué días cumples tus macros y tu racha.</p>`}` };
   }
   function abreMes() { const f = C.fechaDe(claveVista()), x = htmlMes(f.getFullYear(), f.getMonth() + 1); abre(h2(x.titulo), `<div id="mes-cuerpo">${x.cuerpo}</div>`); }
   function pintaMes(a, m) { const x = htmlMes(a, m); $('#sheet-h').textContent = x.titulo; $('#mes-cuerpo').innerHTML = x.cuerpo; }
@@ -1688,6 +1697,7 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
     const c = !otro && pestana === 'hoy' && comidasHoy().length ? cuotaAhora() : null, b = $('#btn-cuadrar');
     $('#pie-plato').hidden = pestana !== 'plato';
     $('#btn-apuntar').hidden = !(pestana === 'plato' && S.plato.items.length > 0);
+    $('#btn-apuntar').textContent = S.plato.cambia && S.plato.cambia.dia !== claveHoy() ? 'Guardar el cambio' : 'Apuntar en Hoy';
     b.hidden = !(c || otro); if (otro) b.textContent = 'Volver a hoy'; else if (c) b.textContent = 'Preparar ' + ARTICULO[c.nombre];
   }
   function abreApuntar() {
@@ -1700,7 +1710,7 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
       <div class="chips">${nombres.map((n) => `<button class="chip" data-a="que-comida" data-v="${n}" aria-pressed="${n === propuesta}">${n}</button>`).join('')}</div>
       <div class="form" style="margin-top:14px">
         <label class="campo"><span>O ponle otro nombre</span><div><input type="text" class="largo" id="otra-comida" data-in="otra" maxlength="24" placeholder="Pre-entreno" autocomplete="off" value="${suelta ? esc(propuesta) : ''}"></div></label>
-        <button class="btn" data-a="apuntar-ya">Apuntar en Hoy</button>
+        <button class="btn" data-a="apuntar-ya">${cam && cam.dia !== claveHoy() ? 'Guardar en ' + elDiaDe(cam.dia) : 'Apuntar en Hoy'}</button>
       </div>`);
   }
   function abreComida(i) {
@@ -1791,7 +1801,7 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
   function htmlPeso() {
     const hoy = claveHoy(), ps = S.pesos, u = ps[ps.length - 1], vistos = ps.slice(-PESOS_VISTOS), c = C.cambioPeso(vistos);
     const propone = u ? u.kg : (S.perfil.ejemplo ? 0 : S.perfil.peso);
-    let h = `<div class="kg-pon"><label class="kg-campo"><input id="kg-in" inputmode="decimal" maxlength="5" value="${propone ? F(propone, 1) : ''}" placeholder="0,0" aria-label="Tu peso de hoy, en kilos"><em>kg</em></label>
+    let h = `<div class="kg-pon"><label class="kg-campo"><input id="kg-in" data-in="kg" inputmode="decimal" enterkeyhint="done" maxlength="5" value="${propone ? F(propone, 1) : ''}" placeholder="0,0" aria-label="Tu peso de hoy, en kilos"><em>kg</em></label>
       <button class="btn" data-a="peso-apuntar">${u && u.f === hoy ? 'Cambiar el peso de hoy' : 'Apuntar el peso de hoy'}</button></div>`;
     trazo = [];
     if (c) {
@@ -1942,7 +1952,7 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
       if (cam) { c.hora = cam.hora; lista.splice(Math.min(cam.pos, lista.length), 0, c); } else lista.push(c);
       if (k === claveHoy() && metaDia()) ponMeta(k, metaDia());
       nuevoPlato(); guardar(); cierra(); pintaPlato();
-      toast(`Apuntado en Hoy: ${nombre}`, 'Deshacer', () => { const x = JSON.parse(previo); S.plato = x.plato; S.dias = x.dias; platoTocado = true; guardar(); irA('plato'); });
+      toast(cam && k !== claveHoy() ? `Guardada en ${elDiaDe(k)}: ${nombre}` : `Apuntado en Hoy: ${nombre}`, 'Deshacer', () => { const x = JSON.parse(previo); S.plato = x.plato; S.dias = x.dias; platoTocado = true; guardar(); irA('plato'); });
     },
     'ver-comida': (el) => abreComida(+el.dataset.i),
     'borrar-comida': (el) => {
@@ -1954,10 +1964,18 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
       const k = claveVista(), i = +el.dataset.i, c = (S.dias[k] || [])[i]; if (!c) return;
       const previo = JSON.stringify({ plato: S.plato, dias: S.dias });
       S.plato = { items: c.items.filter((it) => porId.has(it.id)).map((it) => ({ id: it.id, gramos: it.gramos })), modo: 'gramos', objetivo: null, ejemplo: false, comida: null,
-        cambia: { nombre: c.nombre, hora: c.hora, pos: i, dia: k } };
+        cambia: { nombre: c.nombre, hora: c.hora, pos: i, dia: k, antes: c } };
       platoTocado = true;
       S.dias[k].splice(i, 1); guardar(); cierra(); irA('plato');
       toast('Cámbiala y vuelve a apuntarla', 'Deshacer', () => { const x = JSON.parse(previo); S.plato = x.plato; S.dias = x.dias; platoTocado = true; guardar(); irA('hoy'); });
+    },
+    'cambio-fuera': () => {                                               // la comida que se estaba cambiando vuelve a su día tal como estaba
+      const cam = S.plato.cambia; if (!cam || !cam.antes) return;
+      const lista = S.dias[cam.dia] || (S.dias[cam.dia] = []);
+      lista.splice(Math.min(cam.pos, lista.length), 0, cam.antes);
+      nuevoPlato(); guardar();
+      diaVisto = cam.dia === claveHoy() ? null : cam.dia; irA('hoy');
+      toast(`${cam.nombre}: queda como estaba`);
     },
     aspecto: abreAspecto,
     'pon-aspecto': (el) => { S.aspecto = el.dataset.v; guardar(); aplicaAspecto(); $$('.aspecto').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === S.aspecto))); },
@@ -2044,8 +2062,20 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cierra();
+    if (e.key === 'Enter' && e.target.id === 'kg-in') { ACC['peso-apuntar'](); return; }
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur();
   });
+
+  /* Con el teclado del móvil abierto, las hojas suben lo que ocupa: si no, el campo en el que se escribe queda tapado.
+     (El teclado encoge la parte visible de la pantalla, no la página: se mide con visualViewport.) */
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const teclado = () => {
+      const t = vv.scale > 1.01 ? 0 : Math.round(window.innerHeight - vv.height - vv.offsetTop);   // con la pantalla ampliada no se mide
+      document.documentElement.style.setProperty('--teclado', (t > 80 ? t : 0) + 'px');      // menos de 80 px no es un teclado (barras del navegador)
+    };
+    vv.addEventListener('resize', teclado); vv.addEventListener('scroll', teclado);
+  }
 
   /* El marco de la app nunca se desplaza (el foco en un campo oculto no debe mover la pantalla) */
   const marco = $('#app');

@@ -328,9 +328,9 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
 /* Hojas emergentes */
 .velo { position: absolute; inset: 0; z-index: 10; background: rgb(8 10 14 / .5); opacity: 0; pointer-events: none; transition: opacity .25s; }
 .velo.abierto { opacity: 1; pointer-events: auto; }
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 11; max-height: 92%; display: flex; flex-direction: column; background: var(--hoja); border-radius: 28px 28px 0 0; box-shadow: 0 -20px 60px rgb(0 0 0 / .3); transform: translateY(105%); transition: transform .34s cubic-bezier(.2, .9, .25, 1); }
+.sheet { position: absolute; left: 0; right: 0; bottom: var(--teclado, 0px); z-index: 11; max-height: calc(92% - var(--teclado, 0px)); display: flex; flex-direction: column; background: var(--hoja); border-radius: 28px 28px 0 0; box-shadow: 0 -20px 60px rgb(0 0 0 / .3); transform: translateY(105%); transition: transform .34s cubic-bezier(.2, .9, .25, 1); }
 .sheet.abierto { transform: none; }
-.sheet.alta { height: 92%; }
+.sheet.alta { height: calc(92% - var(--teclado, 0px)); }
 .sheet-cab { flex: none; padding: 10px 16px 6px; }
 .sheet-cab::before { content: ''; display: block; width: 40px; height: 5px; border-radius: 99px; background: var(--linea); margin: 0 auto 12px; }
 .sheet-tit { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
