@@ -32,7 +32,11 @@ const png = (archivo) => { const b = fs.readFileSync(archivo); assert.equal(b.to
   assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow');
   assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
   const csp = r.headers.get('content-security-policy');
-  assert.match(csp, /default-src 'self'/); assert.match(csp, /connect-src 'self'(;|$)/, 'la app solo habla con su propio servidor'); assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /default-src 'self'/); const nube = JSON.parse(fs.readFileSync(path.join(RAIZ, 'nube/config.json'), 'utf8'));
+  assert.ok(csp.includes(`connect-src 'self' ${nube.url};`), 'la app solo habla con su propio servidor y con el de las cuentas');
+  assert.ok(web.includes(`window.MACROS_NUBE = ${JSON.stringify({ url: nube.url, clave: nube.clave })};`), 'la web sabe con qué servidor hablar');
+  assert.match(nube.clave, /^sb_publishable_/, 'la clave que va en la página es la pública');
+  assert.ok(!claude.includes(nube.url) && !claude.includes(nube.clave), 'la versión para Claude no lleva servidor ni clave: allí la app es solo del móvil'); assert.match(csp, /frame-ancestors 'none'/);
   r = await fetch(URL + 'sw.js'); assert.equal(r.status, 200); assert.match(r.headers.get('cache-control'), /no-cache/);
   paso('cabeceras: sin indexar y con una política que no deja salir datos a otros servidores');
 

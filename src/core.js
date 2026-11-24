@@ -417,6 +417,173 @@
     });
   }
 
+  /* ── La nube: qué sube, qué baja y cómo se junta ─────
+   * Cada día, cada peso y los ajustes (perfil, objetivo, favoritos, alimentos y platos propios) son una «fila».
+   * El móvil guarda de cada fila la huella de lo último que sabe que tiene el servidor (base) y, de las que ha
+   * cambiado aquí, la hora del cambio (pend). Gana siempre el cambio más reciente, fila a fila.
+   *   nube = { cursor, base: { dias: {k: huella}, pesos: {k: huella}, estado: huella },
+   *            pend: { dias: {k: {m, f}}, pesos: {k: {m, f}}, estado: {m, f} | null } }                     */
+
+  /** El mismo contenido da siempre el mismo texto, lleguen como lleguen ordenados sus campos (el servidor los reordena). */
+  function canon(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    return '{' + Object.keys(v).sort().filter(function (k) { return v[k] !== undefined; }).map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+  }
+  /** Huella corta (53 bits) de cualquier cosa: para saber si una fila ha cambiado sin guardar una copia. */
+  function huella(v) {
+    var t = typeof v === 'string' ? v : canon(v), h1 = 0xdeadbeef, h2 = 0x41c6ce57, i, c;
+    for (i = 0; i < t.length; i++) { c = t.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+  /** Un día sin comidas es «nada» (huella vacía), tenga o no objetivo guardado. */
+  function huellaDia(comidas, meta) { return comidas && comidas.length ? huella([comidas, meta || null]) : ''; }
+  function huellaPeso(kg) { return kg == null ? '' : String(kg); }
+  /** Lo que se guarda en la cuenta además de días y pesos. El aspecto y el plato a medias son de cada móvil. */
+  function estadoNube(S) { return { perfil: S.perfil, meta: S.meta, favs: S.favs || [], propios: S.propios || [], platos: S.platos || [] }; }
+  function mapaPesos(pesos) { var m = {}; (pesos || []).forEach(function (x) { m[x.f] = x.kg; }); return m; }
+  function listaPesos(m) { return Object.keys(m).sort().map(function (f) { return { f: f, kg: m[f] }; }); }
+  function union(a, b) { var v = {}; Object.keys(a || {}).concat(Object.keys(b || {})).forEach(function (k) { v[k] = 1; }); return Object.keys(v); }
+
+  /**
+   * Apunta la hora (ahora) de cada fila que ya no coincide con lo que tiene el servidor, y olvida las que han vuelto
+   * a coincidir. Los días anteriores a `desde` (los que el móvil ya no guarda) no se miran. Devuelve cuántas quedan.
+   */
+  function detectaCambios(S, nube, ahora, desde) {
+    var base = nube.base, pend = nube.pend, n = 0;
+    function mira(lista, baseDe, k, fl) {
+      var p = lista[k];
+      if (fl === (baseDe[k] || '')) { delete lista[k]; return; }
+      if (!p || p.f !== fl) lista[k] = { m: ahora, f: fl };
+      n++;
+    }
+    union(S.dias, union(base.dias, pend.dias).reduce(function (o, k) { o[k] = 1; return o; }, {})).forEach(function (k) {
+      if (desde && k < desde) { delete base.dias[k]; delete pend.dias[k]; return; }
+      mira(pend.dias, base.dias, k, huellaDia(S.dias[k], S.metas && S.metas[k]));
+    });
+    var mios = mapaPesos(S.pesos);
+    union(mios, union(base.pesos, pend.pesos).reduce(function (o, k) { o[k] = 1; return o; }, {})).forEach(function (k) {
+      mira(pend.pesos, base.pesos, k, huellaPeso(mios[k]));
+    });
+    var fe = huella(estadoNube(S));
+    if (fe === (base.estado || '')) pend.estado = null;
+    else { if (!pend.estado || pend.estado.f !== fe) pend.estado = { m: ahora, f: fe }; n++; }
+    return n;
+  }
+
+  /** Lo que toca subir ahora: los días pendientes más recientes (hasta `tope`), los pesos y los ajustes. */
+  function loQueSube(S, nube, tope) {
+    var pend = nube.pend, cambios = {}, enviado = { dias: {}, pesos: {}, estado: null };
+    var ks = Object.keys(pend.dias).sort().reverse(), mios = mapaPesos(S.pesos), kp = Object.keys(pend.pesos).sort().reverse();
+    var ahora = ks.slice(0, tope || 60);
+    if (ahora.length) cambios.dias = ahora.map(function (k) {
+      var cs = S.dias[k] || [];
+      enviado.dias[k] = pend.dias[k].f;
+      return { d: k, comidas: cs, meta: cs.length ? ((S.metas && S.metas[k]) || null) : null, mod: pend.dias[k].m };
+    });
+    if (kp.length) cambios.pesos = kp.map(function (k) { enviado.pesos[k] = pend.pesos[k].f; return { d: k, kg: mios[k] == null ? null : mios[k], mod: pend.pesos[k].m }; });
+    if (pend.estado) { cambios.estado = { datos: estadoNube(S), mod: pend.estado.m }; enviado.estado = pend.estado.f; }
+    return { cambios: cambios, enviado: enviado, quedan: ks.length > ahora.length };
+  }
+
+  function ponDia(S, k, comidas, meta) {
+    if (comidas && comidas.length) { S.dias[k] = comidas; if (meta) S.metas[k] = meta; else delete S.metas[k]; }
+    else { delete S.dias[k]; delete S.metas[k]; }
+  }
+  function ponEstado(S, d) {
+    if (!d || typeof d !== 'object') return;
+    if (d.perfil && typeof d.perfil === 'object') S.perfil = d.perfil;
+    if (d.meta && typeof d.meta === 'object') S.meta = d.meta;
+    S.favs = Array.isArray(d.favs) ? d.favs : []; S.propios = Array.isArray(d.propios) ? d.propios : []; S.platos = Array.isArray(d.platos) ? d.platos : [];
+  }
+
+  /**
+   * Con la respuesta del servidor: lo que aceptó deja de estar pendiente y lo que llega de fuera (de otro móvil, o lo
+   * suyo cuando rechaza lo mío por viejo) entra en este, salvo que aquí haya un cambio más reciente sin subir.
+   * Devuelve qué ha cambiado en el móvil: { dias, pesos, estado }.
+   */
+  function aplicaRespuesta(S, nube, enviado, resp, desde) {
+    var base = nube.base, pend = nube.pend, rech = resp.rechazadas || {}, cambia = { dias: false, pesos: false, estado: false };
+    function aceptadas(env, lista, baseDe, rechazadas) {
+      Object.keys(env || {}).forEach(function (k) {
+        if ((rechazadas || []).indexOf(k) >= 0) return;
+        baseDe[k] = env[k];
+        if (lista[k] && lista[k].f === env[k]) delete lista[k];
+      });
+    }
+    var gana = function (p, mod) { return p && p.m > mod; };                 // aquí hay un cambio más reciente sin subir
+    aceptadas(enviado.dias, pend.dias, base.dias, rech.dias);
+    aceptadas(enviado.pesos, pend.pesos, base.pesos, rech.pesos);
+    if (enviado.estado && !rech.estado) { base.estado = enviado.estado; if (pend.estado && pend.estado.f === enviado.estado) pend.estado = null; }
+
+    (resp.dias || []).forEach(function (r) {
+      if (desde && r.d < desde) return;
+      base.dias[r.d] = huellaDia(r.comidas, r.meta);
+      if (gana(pend.dias[r.d], r.mod)) return;
+      ponDia(S, r.d, r.comidas, r.meta); delete pend.dias[r.d]; cambia.dias = true;
+    });
+    var mios = mapaPesos(S.pesos), tocados = false;
+    (resp.pesos || []).forEach(function (r) {
+      base.pesos[r.d] = huellaPeso(r.kg);
+      if (gana(pend.pesos[r.d], r.mod)) return;
+      if (r.kg == null) delete mios[r.d]; else mios[r.d] = r.kg;
+      delete pend.pesos[r.d]; tocados = true;
+    });
+    if (tocados) { S.pesos = listaPesos(mios); cambia.pesos = true; }
+    if (resp.estado) {
+      base.estado = huella(resp.estado.datos);
+      if (!gana(pend.estado, resp.estado.mod)) { ponEstado(S, resp.estado.datos); pend.estado = null; cambia.estado = true; }
+    }
+    if (typeof resp.cursor === 'number') nube.cursor = resp.cursor;
+    return cambia;
+  }
+
+  var minutos = function (hora) { var p = String(hora || '').split(':'); return p.length === 2 ? (+p[0]) * 60 + (+p[1]) : 9999; };
+  /** Las comidas de dos lados en una sola lista: las repetidas (mismo nombre, hora y calorías) una vez, y por su hora. */
+  function unirComidas(a, b) {
+    var clave = function (c) { return [c.nombre, c.hora, Math.round(num(c.t && c.t.kcal))].join('|'); }, vistas = {}, out = [];
+    (b || []).concat(a || []).forEach(function (c) { var k = clave(c); if (!vistas[k]) { vistas[k] = 1; out.push(c); } });
+    return out.map(function (c, i) { return { c: c, i: i }; }).sort(function (x, y) { return (minutos(x.c.hora) - minutos(y.c.hora)) || (x.i - y.i); }).map(function (x) { return x.c; });
+  }
+  /**
+   * La primera vez que un móvil entra en una cuenta (resp = todo lo que tiene la cuenta): junta lo que ya había en el
+   * móvil con lo de la cuenta sin perder nada. Días de un solo lado, se quedan; el mismo día en los dos, se juntan sus
+   * comidas. Pesos, los de los dos (el mismo día, el de la cuenta). Perfil y objetivo, los de la cuenta si los tiene;
+   * favoritos, alimentos y platos propios, los de los dos. Lo que el móvil aporta de más lo detecta luego
+   * detectaCambios y sube solo.
+   */
+  function fusionInicial(S, nube, resp, desde) {
+    var base = { dias: {}, pesos: {}, estado: '' };
+    (resp.dias || []).forEach(function (r) {
+      if (desde && r.d < desde) return;
+      base.dias[r.d] = huellaDia(r.comidas, r.meta);
+      var mias = S.dias[r.d] || [];
+      if (!r.comidas || !r.comidas.length) return;                           // la cuenta lo tiene vacío: lo del móvil se queda
+      ponDia(S, r.d, mias.length ? unirComidas(mias, r.comidas) : r.comidas, r.meta || (S.metas && S.metas[r.d]) || null);
+    });
+    var mios = mapaPesos(S.pesos);
+    (resp.pesos || []).forEach(function (r) { base.pesos[r.d] = huellaPeso(r.kg); if (r.kg != null) mios[r.d] = r.kg; });
+    S.pesos = listaPesos(mios);
+    if (resp.estado && resp.estado.datos) {
+      var d = resp.estado.datos, favs = (d.favs || []).slice(), ids = {}, vistos = {};
+      base.estado = huella(d);
+      (S.favs || []).forEach(function (id) { if (favs.indexOf(id) < 0) favs.push(id); });
+      var propios = (d.propios || []).concat(S.propios || []).filter(function (a) { if (!a || ids[a.id]) return false; ids[a.id] = 1; return true; });
+      var platos = (d.platos || []).concat(S.platos || []).filter(function (p) { var k = canon(p); if (vistos[k]) return false; vistos[k] = 1; return true; });
+      ponEstado(S, { perfil: d.perfil, meta: d.meta, favs: favs, propios: propios, platos: platos });
+    }
+    nube.base = base; nube.pend = { dias: {}, pesos: {}, estado: null };
+    nube.cursor = typeof resp.cursor === 'number' ? resp.cursor : 0;
+  }
+
+  /** El código de invitación, ordenado mientras se escribe: «K7MP2XWD9» → «k7mp-2xwd-9». */
+  function codigoBonito(t) {
+    var c = String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+    return c.replace(/(.{4})(?=.)/g, '$1-');
+  }
+
   function redondear5(x) { return Math.round(x / 5) * 5; }
 
   /**
@@ -530,7 +697,9 @@
   var Core = {
     KCAL: KCAL, num: num, macros: macros, totales: totales, reparto: reparto, redondear: redondear, resolver: resolver,
     esAcompanamiento: esAcompanamiento, fijados: fijados, masAporta: masAporta, sugerir: sugerir, objetivos: objetivos, porComida: porComida, norm: norm, buscar: buscar, proteinaPorCaloria: proteinaPorCaloria, fmt: fmt,
-    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, fechaDe: fechaDe, otroDia: otroDia, ultimosDias: ultimosDias, diasDelMes: diasDelMes, cumple: cumple, calendario: calendario, racha: racha, podarDias: podarDias, ponPeso: ponPeso, quitaPeso: quitaPeso, cambioPeso: cambioPeso, plazo: plazo, trazoPeso: trazoPeso
+    veredicto: veredicto, COMIDAS: COMIDAS, planComidas: planComidas, comidaQueToca: comidaQueToca, cuota: cuota, claveDia: claveDia, comidaPorHora: comidaPorHora, apuntar: apuntar, sumaDia: sumaDia, queda: queda, estadoDia: estadoDia, margen: margen, fechaDe: fechaDe, otroDia: otroDia, ultimosDias: ultimosDias, diasDelMes: diasDelMes, cumple: cumple, calendario: calendario, racha: racha, podarDias: podarDias, ponPeso: ponPeso, quitaPeso: quitaPeso, cambioPeso: cambioPeso, plazo: plazo, trazoPeso: trazoPeso,
+    huella: huella, estadoNube: estadoNube, detectaCambios: detectaCambios, loQueSube: loQueSube, aplicaRespuesta: aplicaRespuesta,
+    unirComidas: unirComidas, fusionInicial: fusionInicial, codigoBonito: codigoBonito
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core; else root.Core = Core;
 })(typeof self !== 'undefined' ? self : this);

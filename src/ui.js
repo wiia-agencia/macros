@@ -27,7 +27,7 @@
     cerrado: svg('<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 018 0v3"/>'),
     abierto: svg('<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 017.6-1.7"/>'),
     estrella: svg('<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>'),
-    papelera: svg('<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>'), flecha: svg('<path d="M9 6l6 6-6 6"/>')
+    papelera: svg('<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>'), retro: svg('<path d="M9 6h10a2 2 0 012 2v8a2 2 0 01-2 2H9l-6-6z"/><path d="M12.5 10l4 4M16.5 10l-4 4"/>'), flecha: svg('<path d="M9 6l6 6-6 6"/>')
   };
 
   /* ── Datos ─────────────────────────────────────── */
@@ -46,12 +46,15 @@
   let S = inicial();
   try { const t = localStorage.getItem(CLAVE); if (t) S = Object.assign(inicial(), JSON.parse(t)); } catch (e) { /* sin memoria: se usa igual */ }
   if (['auto', 'claro', 'oscuro'].indexOf(S.aspecto) < 0) S.aspecto = 'auto';   // p. ej. el antiguo «color»
-  S.dias = C.podarDias(S.dias && typeof S.dias === 'object' ? S.dias : {}, 400);  // lo apuntado cada día (se guarda algo más de un año)
+  const DESDE = () => C.otroDia(C.claveDia(new Date()), -400);            // el móvil guarda lo apuntado en los últimos 400 días
+  S.dias = S.dias && typeof S.dias === 'object' ? S.dias : {};
+  { const d = DESDE(); Object.keys(S.dias).forEach((k) => { if (k < d) delete S.dias[k]; }); }
   S.metas = S.metas && typeof S.metas === 'object' ? S.metas : {};                 // el objetivo que tenía cada día
   Object.keys(S.metas).forEach((k) => { if (!S.dias[k]) delete S.metas[k]; });
   S.pesos = (Array.isArray(S.pesos) ? S.pesos : []).reduce((l, x) => (x && /^\d{4}-\d\d-\d\d$/.test(x.f) ? C.ponPeso(l, x.f, x.kg) : l), []);   // el peso apuntado: [{ f: 'AAAA-MM-DD', kg }]
   let tGuardar = 0;
-  const guardaYa = () => { clearTimeout(tGuardar); tGuardar = 0; try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) { /* nada */ } };
+  const NB = window.Nube && window.Nube.activa ? window.Nube : null;      // la cuenta (solo en la web publicada); sin ella, la app es solo del móvil
+  const guardaYa = () => { clearTimeout(tGuardar); tGuardar = 0; try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) { /* nada */ } if (NB) NB.alGuardar(); };
   const guardar = () => { clearTimeout(tGuardar); tGuardar = setTimeout(guardaYa, 250); };
   window.addEventListener('pagehide', () => { if (tGuardar) guardaYa(); });      // apuntar y cerrar al instante no pierde lo apuntado
 
@@ -658,7 +661,7 @@
     if (M.modo === 'mano') {
       const campo = (m) => `<label class="campo-m" data-m="${m}"><span>${NOMBRE[m]}</span><div><input inputmode="numeric" pattern="[0-9]*" maxlength="3" data-in="mano" data-m="${m}" value="${M.mano[m] == null ? '' : M.mano[m]}" placeholder="0" aria-label="${NOMBRE[m]} al día, en gramos"><em>g</em></div></label>`;
       el.innerHTML = `<p class="nota" style="margin:16px 4px 10px">Pon los gramos al día que te haya dado tu entrenador o tu nutricionista.</p>
-        <div class="obj-campos">${MAC.map(campo).join('')}</div><p class="subtitulo" id="mano-kcal"></p><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div>`;
+        <div class="obj-campos">${MAC.map(campo).join('')}</div><p class="subtitulo" id="mano-kcal"></p><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div><div id="fila-cuenta">${htmlFilaCuenta()}</div>`;
       pintaManoKcal(); return;
     }
     const n = NIVELES[p.nivel - 1];
@@ -670,7 +673,7 @@
       </div>
       ${p.ejemplo ? `<p class="nota" id="nota-ej">Son datos de ejemplo: cámbialos por los tuyos.</p>` : ''}
       <h2 class="subtitulo">Elige lo que buscas</h2>
-      <div id="metas">${htmlMetas()}</div><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div>${COMO}`;
+      <div id="metas">${htmlMetas()}</div><div id="comidas">${htmlComidas()}</div><div id="fila-peso">${htmlFilaPeso()}</div><div id="fila-cuenta">${htmlFilaCuenta()}</div>${COMO}`;
     ponModos('#modos-sexo', p.sexo === 'm' ? 1 : 0);
   }
   function pintaManoKcal() { const md = metaDia(), el = $('#mano-kcal'); if (el) el.textContent = md ? `En total, ${F(md.kcal)} kcal al día` : 'Rellena los tres para empezar'; }
@@ -738,6 +741,139 @@
   document.addEventListener('pointerdown', leePeso);
   document.addEventListener('pointermove', leePeso);
 
+  /* ── La cuenta: entrar con código y PIN ─────────────
+   * Solo en la web publicada (NB). La pantalla de entrada tapa la app hasta que se entra; el móvil se queda dentro. */
+  const entrada = $('#entrada');
+  const EN = { paso: 'codigo', codigo: '', nombre: '', nuevo: false, pin: '', primero: '', aviso: '', ocupado: false };
+  const LOGO = `<svg viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" class="en-disco"/><g fill="none" stroke-width="11" stroke-linecap="round" transform="rotate(-90 36 36)"><circle cx="36" cy="36" r="24" stroke="var(--p)" stroke-dasharray="36 151" stroke-dashoffset="-8"/><circle cx="36" cy="36" r="24" stroke="var(--h)" stroke-dasharray="52 151" stroke-dashoffset="-60"/><circle cx="36" cy="36" r="24" stroke="var(--g)" stroke-dasharray="23 151" stroke-dashoffset="-128"/></g></svg>`;
+  const completo = (c) => c.replace(/[^a-z0-9]/gi, '').length === 12;
+  const NO_VALE = 'Ese código no vale. Pide a quien te invitó que te pase otro.', SIN_RED = 'Sin conexión. Hace falta para entrar.';
+  const TXT_PIN = () => (!EN.nuevo ? 'Escribe tu PIN.' : EN.primero ? 'Repite tu PIN.' : 'Crea tu PIN de 4 números. Solo te lo pedirá si entras desde otro móvil.');
+  /** «15 minutos», «2 horas»: lo que falta para poder probar otra vez. */
+  const esperaTxt = (seg) => { const m = Math.ceil(seg / 60); if (m < 60) return m + (m === 1 ? ' minuto' : ' minutos'); const h = Math.ceil(m / 60); return h + (h === 1 ? ' hora' : ' horas'); };
+  function pintaEntrada() {
+    const cerrada = NB.cerrada();
+    if (EN.paso === 'limpiar') {
+      entrada.innerHTML = `<div class="en-caja">${LOGO}<h1>Cerrar la sesión de este móvil</h1>
+        <p class="en-sub">El móvil se quedará limpio. Lo que no haya llegado a subir a esa cuenta se perderá.</p>
+        <button class="btn" data-a="en-limpiar-ya">Cerrar la sesión de este móvil</button><button class="en-enlace" data-a="en-otro">Cancelar</button></div>`;
+    } else if (EN.paso === 'pin') {
+      const teclas = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button data-a="en-tecla" data-v="${n}">${n}</button>`).join('');
+      entrada.innerHTML = `<div class="en-caja">${LOGO}<h1 id="en-hola">Hola, ${esc(EN.nombre)}</h1>
+        <p class="en-sub" id="en-texto">${TXT_PIN()}</p>
+        <div class="en-puntos" id="en-puntos" data-n="${EN.pin.length}" role="img" aria-label="${EN.pin.length} de 4 números">${[0, 1, 2, 3].map((i) => `<i${i < EN.pin.length ? ' class="on"' : ''}></i>`).join('')}</div>
+        <p class="en-aviso" id="en-aviso" role="alert">${esc(EN.aviso)}</p></div>
+        <div class="en-teclas${EN.ocupado ? ' ocupado' : ''}">${teclas}<span></span><button data-a="en-tecla" data-v="0">0</button><button data-a="en-borra" aria-label="Borrar">${ICO.retro}</button></div>
+        <button class="en-enlace" data-a="en-otro">Usar otro código</button>`;
+    } else {
+      entrada.innerHTML = `<div class="en-caja">${LOGO}<h1>Macros</h1>
+        <p class="en-sub">${cerrada ? 'Tu sesión se ha cerrado. Entra otra vez con tu código.' : 'Entra con la invitación que te han pasado.'}</p>
+        <label class="en-campo"><span>Código de invitación</span><input id="en-codigo" data-in="en-codigo" maxlength="120" placeholder="xxxx-xxxx-xxxx" value="${esc(EN.codigo)}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go"></label>
+        <button class="btn" data-a="en-seguir"${completo(EN.codigo) && !EN.ocupado ? '' : ' disabled'}>Seguir</button>
+        <p class="en-aviso" id="en-aviso" role="alert">${esc(EN.aviso)}</p>
+        ${cerrada ? '<button class="en-enlace" data-a="en-limpiar">Cerrar la sesión de este móvil</button>' : ''}</div>
+        <p class="en-pie">Sin correo ni contraseña. Lo que apuntes es solo tuyo.</p>`;
+    }
+  }
+  /** Con la pantalla de entrada puesta, lo de debajo no se puede tocar ni recorrer con el teclado. */
+  function tapa(si) { Array.prototype.forEach.call($('#app').children, (el) => { if (el !== entrada) el.inert = si; }); entrada.hidden = !si; }
+  function muestraEntrada(aviso) {
+    cierra();
+    Object.assign(EN, { paso: 'codigo', pin: '', primero: '', aviso: aviso || '', ocupado: false });
+    tapa(true); pintaEntrada();
+  }
+  /** Ya dentro: se quita la pantalla de entrada y se pone al día con la cuenta. */
+  function yaDentro() {
+    Object.assign(EN, { paso: 'codigo', codigo: '', pin: '', primero: '', aviso: '', ocupado: false });
+    tapa(false); entrada.innerHTML = '';
+    irA(pestana); NB.sinc();
+  }
+  function alCodigo(aviso) { Object.assign(EN, { paso: 'codigo', pin: '', primero: '', aviso, ocupado: false }); pintaEntrada(); }
+  function alPin(aviso) { Object.assign(EN, { pin: '', aviso: aviso || '', ocupado: false }); pintaEntrada(); }
+  /** Con los cuatro números puestos: crear el PIN (pidiéndolo dos veces) o entrar con él. */
+  function conPin() {
+    const pin = EN.pin;
+    if (EN.nuevo && !EN.primero) { EN.primero = pin; return alPin(''); }
+    if (EN.nuevo && EN.primero !== pin) { EN.primero = ''; return alPin('No coinciden. Empieza otra vez.'); }
+    EN.ocupado = true; pintaEntrada();
+    (EN.nuevo ? NB.crearPin(EN.codigo, pin) : NB.entrar(EN.codigo, pin)).then((r) => {
+      if (r && r.ok) return yaDentro();
+      const m = r && r.motivo;
+      if (m === 'pin') return alPin(`PIN incorrecto. ${r.quedan === 1 ? 'Te queda 1 intento' : `Te quedan ${r.quedan} intentos`}.`);
+      if (m === 'bloqueado') return alPin(`Demasiados intentos. Prueba otra vez en ${esperaTxt(r.espera)}.`);
+      if (m === 'nuevo') { EN.nuevo = true; EN.primero = ''; return alPin(''); }
+      if (m === 'ya') { EN.nuevo = false; EN.primero = ''; return alPin('Este código ya tiene PIN. Escríbelo.'); }
+      if (m === 'otra') return alCodigo('Este móvil guarda lo de otra cuenta. Cierra antes su sesión, aquí abajo.');
+      return alCodigo(NO_VALE);
+    }, () => { EN.primero = EN.nuevo ? EN.primero : ''; alPin(SIN_RED); });
+  }
+  /** El enlace de invitación trae el código detrás de «#c=» (esa parte no viaja a ningún servidor): se lee y se quita. */
+  function leeEnlace() {
+    const m = /[#&]c=([A-Za-z0-9-]{4,20})/.exec(location.hash || ''); if (!m) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* se queda en la dirección */ }
+    if (!NB || NB.dentro()) return;                                       // quien ya está dentro no cambia de cuenta por abrir un enlace
+    muestraEntrada(''); EN.codigo = C.codigoBonito(m[1]); pintaEntrada();
+    if (completo(EN.codigo)) ACC['en-seguir']();
+  }
+
+  /* La fila de «Mis macros», la hoja «Tu cuenta» y, para el administrador, «Usuarios» */
+  function txtCuenta() {
+    const e = NB.estado();
+    if (e.fallo === 'red') return 'Sin conexión: se guardará al volver';
+    if (e.fallo) return 'No se ha podido guardar. Se intentará otra vez';
+    return e.enMarcha || e.pendientes ? 'Guardando…' : 'Todo guardado';
+  }
+  function htmlFilaCuenta() {
+    if (!NB || !NB.dentro()) return '';
+    return `<button class="linea-dato toca" data-a="cuenta"><span><b>Tu cuenta: ${esc(NB.usuario().nombre)}</b> <small id="fc-estado">${txtCuenta()}</small></span><span class="pildora">Ver</span></button>`;
+  }
+  function abreCuenta() {
+    const u = NB.usuario();
+    abre(h2('Tu cuenta'), `<p class="cu-nombre">${esc(u.nombre)}</p><p class="nota" id="cu-estado">${txtCuenta()}</p>
+      <p class="nota">Lo que apuntas se guarda en tu cuenta y solo lo ves tú.</p>
+      <div class="btn-pila">${u.admin ? '<button class="btn" data-a="cu-usuarios">Usuarios</button>' : ''}<button class="btn suave" data-a="cu-salir">Cerrar sesión</button></div>`);
+  }
+  /** Cuando cambia algo de la cuenta (empieza o acaba de guardar, se queda sin conexión, el servidor cierra la sesión…). */
+  function cambiaCuenta() {
+    if (NB.cerrada()) { if (entrada.hidden) muestraEntrada(''); return; }
+    const t = txtCuenta(), a = $('#fc-estado'), b = $('#cu-estado');
+    if (a) a.textContent = t; if (b) b.textContent = t;
+  }
+  /** Lo que llega de la cuenta ya está en el estado: se rehace el índice de alimentos y se repinta lo que se ve. */
+  function llegaDeLaCuenta(c) {
+    if (c.estado) indexar();
+    const foco = document.activeElement;
+    if (abierta || (foco && foco.tagName === 'INPUT' && !entrada.contains(foco))) return;      // no se le quita el campo a quien está escribiendo
+    irA(pestana);
+  }
+  const quien = { id: null, nombre: '', activo: true };                   // a quién está mirando el administrador
+  const cuando = (iso) => { const d = new Date(iso), k = C.claveDia(d), dia = diaCorto(k); return capital(dia) + (dia === 'hoy' || dia === 'ayer' ? `, ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` : ''); };
+  function htmlUsuario(u) {
+    const sub = u.pendiente ? (u.caduca_dias === 0 ? 'Invitación caducada' : `Invitación sin usar · caduca en ${u.caduca_dias} ${u.caduca_dias === 1 ? 'día' : 'días'}`)
+      : `${u.visto ? cuando(u.visto) : 'Sin entrar'} · ${u.dias7} de 7 días apuntados${u.bloqueado ? ' · PIN bloqueado' : ''}`;
+    const pildora = u.yo ? 'Tú · admin' : !u.activo ? 'Desactivado' : u.pendiente ? 'Pendiente' : u.admin ? 'Admin' : 'Activo';
+    const dentroFila = `<span class="us-inicial${u.pendiente ? ' gris' : ''}">${esc(u.nombre.charAt(0).toUpperCase())}</span> <span class="us-txt"><b class="us-nombre">${esc(u.nombre)}</b> <small class="us-sub">${sub}</small></span> <span class="us-pildora">${pildora}</span>`;
+    return u.yo ? `<div class="us-fila">${dentroFila}</div>`
+      : `<button class="us-fila" data-a="us-ver" data-id="${u.id}" data-nombre="${esc(u.nombre)}" data-activo="${u.activo}" data-sub="${esc(sub)}">${dentroFila}</button>`;
+  }
+  const sinRed = () => toast('Sin conexión. Inténtalo otra vez');
+  function abreUsuarios() {
+    abre(h2('Usuarios'), `<div id="us-cuerpo"><p class="nota">Un momento…</p></div>`);
+    NB.admin.usuarios().then((r) => {
+      const el = $('#us-cuerpo'); if (!el) return;
+      if (!r || !r.ok) { el.innerHTML = '<p class="nota">Esto solo lo ve el administrador.</p>'; return; }
+      el.innerHTML = `<p class="nota">Solo lo ves tú, como administrador.</p><div class="us-lista">${r.usuarios.map(htmlUsuario).join('')}</div>
+        <button class="btn" data-a="us-invitar" style="margin-top:14px">Invitar a alguien</button>`;
+    }, () => { const el = $('#us-cuerpo'); if (el) el.innerHTML = '<p class="nota">Sin conexión. Cierra y vuelve a abrir cuando la tengas.</p>'; });
+  }
+  /** El enlace de invitación recién creado: es la única vez que se ve. */
+  function abreEnlace(nombre, codigo) {
+    const url = location.origin + '/#c=' + codigo;
+    abre(h2(`Invitación para ${esc(nombre)}`), `<p class="nota">Pásale este enlace. Es solo para ${esc(nombre)} y vale 7 días: al abrirlo creará su PIN. Solo se enseña ahora.</p>
+      <div class="us-enlace" id="us-enlace">${esc(url)}</div>
+      <div class="btn-pila"><button class="btn" data-a="us-copiar">Copiar enlace</button>${navigator.share ? '<button class="btn suave" data-a="us-compartir">Compartir</button>' : ''}<button class="btn suave" data-a="us-volver">Volver a usuarios</button></div>`);
+  }
+
   /* ── Navegación y aspecto ──────────────────────── */
   const TABS = ['plato', 'alimentos', 'hoy', 'macros'];
   let pestana = 'plato';
@@ -768,6 +904,59 @@
     'ver-dia': (el) => { const k = el.dataset.k, hoy = claveHoy(); if (k > hoy) return; diaVisto = k === hoy ? null : k; cierra(); pintaHoy(); $('#p-hoy').scrollTop = 0; },
     mes: abreMes,
     peso: abrePeso,
+    /* la cuenta */
+    'en-seguir': () => {
+      const el = $('#en-codigo'); if (el) EN.codigo = C.codigoBonito(el.value);
+      if (!completo(EN.codigo) || EN.ocupado) return;
+      EN.ocupado = true; EN.aviso = ''; pintaEntrada();
+      NB.mirar(EN.codigo).then((r) => {
+        if (!r || !r.vale) return alCodigo(NO_VALE);
+        Object.assign(EN, { paso: 'pin', nombre: r.nombre, nuevo: !!r.nuevo, primero: '' });
+        alPin(r.espera > 0 ? `Demasiados intentos. Prueba otra vez en ${esperaTxt(r.espera)}.` : '');
+      }, () => alCodigo(SIN_RED));
+    },
+    'en-tecla': (el) => { if (EN.ocupado || EN.pin.length >= 4) return; EN.pin += el.dataset.v; EN.aviso = ''; pintaEntrada(); if (EN.pin.length === 4) setTimeout(conPin, 160); },
+    'en-borra': () => { if (EN.ocupado) return; EN.pin = EN.pin.slice(0, -1); pintaEntrada(); },
+    'en-otro': () => alCodigo(''),
+    'en-limpiar': () => { EN.paso = 'limpiar'; pintaEntrada(); },
+    'en-limpiar-ya': () => { NB.salir(true).then(() => location.reload()); },
+    cuenta: abreCuenta,
+    'cu-salir': () => abre(h2('Cerrar sesión'), `<p class="nota">Este móvil se quedará limpio. Tus datos siguen en tu cuenta: los verás al volver a entrar con tu código y tu PIN.</p>
+      <div class="btn-pila"><button class="btn" data-a="cu-salir-ya">Cerrar sesión</button><button class="btn suave" data-a="cerrar">Cancelar</button></div>`),
+    'cu-salir-ya': (el) => {
+      el.disabled = true; if (tGuardar) guardaYa();
+      NB.salir().then((r) => {
+        if (r.ok) return location.reload();
+        el.disabled = false;
+        if (r.motivo === 'cerrada') return cierra();
+        toast('Sin conexión: hay cosas sin subir. Inténtalo otra vez con conexión');
+      });
+    },
+    'cu-usuarios': abreUsuarios, 'us-volver': abreUsuarios,
+    'us-invitar': () => abre(h2('Invitar a alguien'), `<div class="form"><label class="campo"><span>¿Para quién es?</span><div><input type="text" class="largo" id="us-nombre" maxlength="40" placeholder="Su nombre" autocomplete="off"></div></label>
+      <div class="btn-pila"><button class="btn" data-a="us-crear">Crear invitación</button><button class="btn suave" data-a="us-volver">Volver a usuarios</button></div></div>`),
+    'us-crear': (el) => {
+      const nombre = ($('#us-nombre').value || '').trim(); if (!nombre) { $('#us-nombre').focus(); return; }
+      el.disabled = true;
+      NB.admin.invitar(nombre).then((r) => { if (r && r.ok) return abreEnlace(nombre, r.codigo); el.disabled = false; toast(r && r.motivo === 'tope' ? 'No caben más usuarios' : 'No se ha podido crear'); }, () => { el.disabled = false; sinRed(); });
+    },
+    'us-copiar': () => {
+      const url = $('#us-enlace').textContent;
+      const hecho = () => toast('Enlace copiado');
+      const aMano = () => { const r = document.createRange(); r.selectNodeContents($('#us-enlace')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Mantén pulsado el enlace para copiarlo'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(hecho, aMano); else aMano();
+    },
+    'us-compartir': () => { navigator.share({ title: 'Macros', text: 'Tu invitación para Macros', url: $('#us-enlace').textContent }).catch(() => {}); },
+    'us-ver': (el) => {
+      Object.assign(quien, { id: el.dataset.id, nombre: el.dataset.nombre, activo: el.dataset.activo === 'true' });
+      abre(h2(esc(quien.nombre)), `<p class="nota">${esc(el.dataset.sub)}</p>
+        <div class="btn-pila"><button class="btn suave" data-a="us-enlace-nuevo">Darle un enlace nuevo</button><button class="btn suave${quien.activo ? ' peligro' : ''}" data-a="us-activar">${quien.activo ? 'Desactivar' : 'Activar'}</button><button class="btn suave" data-a="us-volver">Volver a usuarios</button></div>
+        <p class="nota" style="margin-top:12px">${quien.activo ? 'Desactivar le saca de la app al momento. Sus datos se quedan guardados por si vuelve.' : 'Al activarle podrá entrar otra vez con su código y su PIN.'}</p>`);
+    },
+    'us-activar': (el) => { el.disabled = true; NB.admin.activar(quien.id, !quien.activo).then(abreUsuarios, () => { el.disabled = false; sinRed(); }); },
+    'us-enlace-nuevo': () => abre(h2('Enlace nuevo'), `<p class="nota">El enlace de ahora dejará de valer, sus móviles saldrán de la cuenta y tendrá que crear un PIN nuevo. Sus datos no se tocan.</p>
+      <div class="btn-pila"><button class="btn" data-a="us-enlace-ya">Darle un enlace nuevo</button><button class="btn suave" data-a="us-volver">Cancelar</button></div>`),
+    'us-enlace-ya': (el) => { el.disabled = true; NB.admin.enlace(quien.id).then((r) => { if (r && r.ok) return abreEnlace(quien.nombre, r.codigo); el.disabled = false; toast('No se ha podido'); }, () => { el.disabled = false; sinRed(); }); },
     'peso-apuntar': () => {
       const el = $('#kg-in'), v = Math.round(C.num(el.value) * 10) / 10;
       if (!(v >= 30 && v <= 300)) { toast('Pon un peso entre 30 y 300 kg'); el.focus(); return; }
@@ -942,6 +1131,7 @@
       guardar(); refrescaPlato();
     },
     q: (el) => { FIL[el.dataset.k].q = el.value; pintaLista(el.dataset.k); },
+    'en-codigo': (el) => { const m = /c=([A-Za-z0-9-]+)/.exec(el.value); el.value = EN.codigo = C.codigoBonito(m ? m[1] : el.value); $('#entrada [data-a="en-seguir"]').disabled = !completo(EN.codigo); const a = $('#en-aviso'); if (a) a.textContent = ''; EN.aviso = ''; },
     otra: (el) => { if (el.value.trim()) $$('#sheet [data-a="que-comida"]').forEach((b) => b.setAttribute('aria-pressed', 'false')); },
     orden: (el) => { FIL[el.dataset.k].orden = el.value; pintaLista(el.dataset.k); },
     perfil: (el) => {
@@ -955,13 +1145,18 @@
   const alEscribir = (e) => { const k = e.target.dataset && e.target.dataset.in; if (k && ENT[k]) ENT[k](e.target); };
   document.addEventListener('input', alEscribir);
   document.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') alEscribir(e); });
-  document.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT' && e.target.dataset.in && e.target.type !== 'range' && e.target.type !== 'search') e.target.select(); });
+  document.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT' && e.target.dataset.in && e.target.dataset.in !== 'en-codigo' && e.target.type !== 'range' && e.target.type !== 'search') e.target.select(); });
   document.addEventListener('focusout', (e) => {
     const el = e.target; if (!el.dataset || el.dataset.in !== 'gramos') return;
     const it = S.plato.items[+el.dataset.i]; if (it) el.value = it.gramos;
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cierra();
+    if (!entrada.hidden) {
+      if (e.key === 'Enter' && e.target.id === 'en-codigo') { ACC['en-seguir'](); return; }
+      if (EN.paso === 'pin' && /^[0-9]$/.test(e.key)) { ACC['en-tecla']({ dataset: { v: e.key } }); return; }
+      if (EN.paso === 'pin' && e.key === 'Backspace') { ACC['en-borra'](); return; }
+    }
     if (e.key === 'Enter' && e.target.id === 'kg-in') { ACC['peso-apuntar'](); return; }
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur();
   });
@@ -983,7 +1178,8 @@
   window.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { if (tGuardar) guardaYa(); return; }
+    if (document.hidden) { if (tGuardar) guardaYa(); if (NB) NB.alOcultar(); return; }
+    if (NB) NB.alVolver();
     if (!S.plato.items.length) platoTocado = false;
     if (pestana === 'plato') pintaPlato(); else if (pestana === 'hoy') pintaHoy();
   });
@@ -1001,4 +1197,11 @@
   aplicaAspecto();
   pintaBiblio();
   irA('plato');
+  if (NB) {                                        // la web publicada: sin entrar no se usa; quien ya entró se pone al día
+    NB.conecta({ S: () => S, guarda: guardaYa, repinta: llegaDeLaCuenta, desde: DESDE, cambia: cambiaCuenta });
+    if (NB.dentro()) NB.sinc(); else muestraEntrada('');
+    leeEnlace();
+    window.addEventListener('hashchange', leeEnlace);
+    window.addEventListener('online', () => { if (NB.dentro()) NB.sinc(); });
+  }
 })();

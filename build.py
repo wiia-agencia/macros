@@ -11,11 +11,17 @@ fuentes = cara('Bricolage Grotesque', os.path.join(FUENTES, 'bricolage-grotesque
           cara('Figtree', os.path.join(FUENTES, 'figtree-latin-wght-normal.woff2'), '300 900')
 datos = json.dumps(json.load(open(os.path.join(R, 'data', 'alimentos.json'), encoding='utf-8')), ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
 html = lee('src', 'index.tpl.html')
-for marca, valor in (('/*FUENTES*/', fuentes), ('/*CSS*/', lee('src', 'app.css')), ('/*DATOS*/', datos), ('/*CORE*/', lee('src', 'core.js')), ('/*UI*/', lee('src', 'ui.js'))):
+for marca, valor in (('/*FUENTES*/', fuentes), ('/*CSS*/', lee('src', 'app.css')), ('/*DATOS*/', datos), ('/*CORE*/', lee('src', 'core.js')), ('/*NUBE*/', lee('src', 'nube.js')), ('/*UI*/', lee('src', 'ui.js'))):
     assert html.count(marca) == 1, marca
     html = html.replace(marca, valor)
 # Lo que solo lleva la web: el manifiesto, los iconos, no indexar y el registro del service worker
+# Con qué servidor habla la web para las cuentas (dirección y clave pública de Supabase: las dos se pueden ver, no son un secreto).
+# La versión que se abre dentro de Claude no lo lleva: allí la app es solo del móvil.
+NUBE = json.loads(lee('nube', 'config.json'))
+POLITICA = [c['value'] for h in json.loads(lee('vercel.json'))['headers'] for c in h['headers'] if c['key'] == 'Content-Security-Policy'][0]
+assert "connect-src 'self' " + NUBE['url'] + ';' in POLITICA, 'vercel.json tiene que dejar hablar con ' + NUBE['url'] + ' y con nada más'
 CABEZA = """<!--WEB--><meta name="robots" content="noindex, nofollow">
+<!--NUBE--><script>window.MACROS_NUBE = """ + json.dumps({'url': NUBE['url'], 'clave': NUBE['clave']}, separators=(',', ':')) + """;</script><!--/NUBE-->
 <meta name="description" content="Tus macros del día: cuánto te toca en cada comida y cuántos gramos de cada alimento.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icono.svg" type="image/svg+xml">

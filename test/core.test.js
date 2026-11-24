@@ -603,3 +603,162 @@ test('gráfica del peso: con un rango mínimo, dos décimas de diferencia no par
   const amplio = Core.trazoPeso([{ f: '2026-11-01', kg: 80 }, { f: '2026-11-11', kg: 76 }], 300, 100, 10, 2);
   assert.deepEqual(amplio.map((p) => p.y), [10, 90], 'si el cambio ya es mayor, ocupa toda la caja');
 });
+
+/* ── La nube: qué sube, qué baja y cómo se junta ── */
+const comidaN = (nombre, hora, kcal) => ({ nombre, hora, items: [{ id: 'U11367', n: 'Patata', e: 'cocida', gramos: 300 }], t: { kcal, p: 30, h: 40, g: 10, f: 3 } });
+const META_N = { kcal: 2140, p: 165, h: 235, g: 60 };
+const estadoN = (mas) => Object.assign({ perfil: { sexo: 'h', edad: 30, peso: 75, altura: 178, nivel: 3, ejemplo: false }, meta: { modo: 'mano', tipo: null, comidas: 4, mano: { p: 165, h: 235, g: 60 } },
+  favs: [], propios: [], platos: [], dias: {}, metas: {}, pesos: [] }, mas || {});
+const nubeN = () => ({ cursor: 0, base: { dias: {}, pesos: {}, estado: '' }, pend: { dias: {}, pesos: {}, estado: null } });
+const respN = (mas) => Object.assign({ sesion: true, cursor: 0, dias: [], pesos: [], estado: null, rechazadas: { dias: [], pesos: [], estado: false } }, mas || {});
+
+test('huella: la misma cosa da la misma huella aunque sus campos lleguen en otro orden; otra cosa, otra', () => {
+  assert.equal(Core.huella({ a: 1, b: [{ x: 1, y: 2 }] }), Core.huella({ b: [{ y: 2, x: 1 }], a: 1 }));
+  assert.notEqual(Core.huella({ a: 1 }), Core.huella({ a: 2 }));
+  assert.notEqual(Core.huella([1, 2]), Core.huella([2, 1]), 'el orden de una lista sí cuenta');
+  assert.match(Core.huella('hola'), /^[0-9a-z]{8,12}$/);
+  const vistas = new Set(); for (let i = 0; i < 5000; i++) vistas.add(Core.huella({ i }));
+  assert.equal(vistas.size, 5000, 'sin repetidas en 5.000 cosas distintas');
+});
+
+test('cambios: se apunta la hora de cada día, peso o ajuste que cambia en el móvil, y se olvida si vuelve a como estaba', () => {
+  const S = estadoN({ dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500)] }, metas: { '2026-11-24': META_N }, pesos: [{ f: '2026-11-24', kg: 76.9 }] }), n = nubeN();
+  assert.equal(Core.detectaCambios(S, n, 1000, '2025-10-20'), 3, 'un día, un peso y los ajustes');
+  assert.deepEqual([n.pend.dias['2026-11-24'].m, n.pend.pesos['2026-11-24'].m, n.pend.estado.m], [1000, 1000, 1000]);
+  Core.detectaCambios(S, n, 2000, '2025-10-20');
+  assert.equal(n.pend.dias['2026-11-24'].m, 1000, 'sin cambios nuevos, la hora no se mueve');
+  S.dias['2026-11-24'].push(comidaN('Comida', '14:00', 700)); S.perfil.peso = 77;
+  Core.detectaCambios(S, n, 3000, '2025-10-20');
+  assert.deepEqual([n.pend.dias['2026-11-24'].m, n.pend.pesos['2026-11-24'].m, n.pend.estado.m], [3000, 1000, 3000], 'lo que vuelve a cambiar lleva la hora nueva');
+  // lo que ya coincide con el servidor no está pendiente
+  n.base.dias['2026-11-24'] = n.pend.dias['2026-11-24'].f; n.base.pesos['2026-11-24'] = n.pend.pesos['2026-11-24'].f; n.base.estado = n.pend.estado.f;
+  assert.equal(Core.detectaCambios(S, n, 4000, '2025-10-20'), 0);
+  assert.deepEqual(n.pend, { dias: {}, pesos: {}, estado: null });
+  // borrar: un día que se queda sin comidas y un peso quitado también son cambios
+  S.dias['2026-11-24'] = []; S.pesos = [];
+  assert.equal(Core.detectaCambios(S, n, 5000, '2025-10-20'), 2);
+  assert.deepEqual([n.pend.dias['2026-11-24'], n.pend.pesos['2026-11-24']], [{ m: 5000, f: '' }, { m: 5000, f: '' }]);
+});
+
+test('cambios: los días que el móvil ya no guarda por viejos no se tocan en la cuenta', () => {
+  const S = estadoN({ dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500)] } }), n = nubeN();
+  n.base.dias['2025-09-01'] = 'abc';                                    // la cuenta lo tiene; el móvil lo ha soltado por viejo
+  n.base.estado = Core.huella(Core.estadoNube(S));
+  assert.equal(Core.detectaCambios(S, n, 1000, '2025-10-20'), 1);
+  assert.deepEqual(Object.keys(n.pend.dias), ['2026-11-24'], 'el día viejo no se manda como borrado');
+});
+
+test('lo que sube: primero los días más recientes, por tandas, con lo que hay ahora en el móvil', () => {
+  const S = estadoN({ dias: {}, metas: {}, pesos: [{ f: '2026-11-24', kg: 76.9 }] }), n = nubeN();
+  for (let i = 1; i <= 24; i++) { const k = '2026-11-' + String(i).padStart(2, '0'); S.dias[k] = [comidaN('Comida', '14:00', 500 + i)]; S.metas[k] = META_N; }
+  S.dias['2026-11-03'] = [];                                            // un día que se vació
+  n.base.dias['2026-11-03'] = 'antes';
+  Core.detectaCambios(S, n, 1000, '2025-10-20');
+  const s = Core.loQueSube(S, n, 10);
+  assert.deepEqual(s.cambios.dias.map((x) => x.d), ['2026-11-24', '2026-11-23', '2026-11-22', '2026-11-21', '2026-11-20', '2026-11-19', '2026-11-18', '2026-11-17', '2026-11-16', '2026-11-15']);
+  assert.deepEqual(s.cambios.dias[0], { d: '2026-11-24', comidas: S.dias['2026-11-24'], meta: META_N, mod: 1000 });
+  assert.deepEqual(s.cambios.pesos, [{ d: '2026-11-24', kg: 76.9, mod: 1000 }]);
+  assert.deepEqual(s.cambios.estado, { datos: Core.estadoNube(S), mod: 1000 });
+  assert.equal(s.quedan, true, 'quedan días para la tanda siguiente');
+  assert.equal(s.enviado.dias['2026-11-24'], n.pend.dias['2026-11-24'].f);
+  const todo = Core.loQueSube(S, n, 60);
+  assert.equal(todo.cambios.dias.length, 24); assert.equal(todo.quedan, false);
+  assert.deepEqual(todo.cambios.dias.find((x) => x.d === '2026-11-03'), { d: '2026-11-03', comidas: [], meta: null, mod: 1000 }, 'el día vaciado sube vacío');
+  assert.deepEqual(Core.loQueSube(S, nubeN(), 60), { cambios: {}, enviado: { dias: {}, pesos: {}, estado: null }, quedan: false }, 'sin nada pendiente no sube nada');
+});
+
+test('respuesta: lo aceptado deja de estar pendiente; lo que llega de otro móvil entra en este', () => {
+  const S = estadoN({ dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500)] }, metas: { '2026-11-24': META_N }, pesos: [{ f: '2026-11-24', kg: 76.9 }] }), n = nubeN();
+  Core.detectaCambios(S, n, 1000, '2025-10-20');
+  const s = Core.loQueSube(S, n, 60);
+  const otroEstado = { perfil: { sexo: 'm', edad: 28, peso: 60, altura: 165, nivel: 2, ejemplo: false }, meta: { modo: 'calc', tipo: 'definir', comidas: 3, mano: null }, favs: ['U1'], propios: [{ id: 'P1', n: 'Bizcocho' }], platos: [{ nombre: 'Cena fija', items: [] }] };
+  const cambia = Core.aplicaRespuesta(S, n, s.enviado, respN({ cursor: 9,
+    dias: [{ d: '2026-11-23', comidas: [comidaN('Cena', '21:00', 600)], meta: META_N, mod: 900 }],
+    pesos: [{ d: '2026-11-20', kg: 77.5, mod: 900 }, { d: '2026-11-19', kg: null, mod: 900 }] }), '2025-10-20');
+  assert.deepEqual(cambia, { dias: true, pesos: true, estado: false });
+  assert.deepEqual(n.pend, { dias: {}, pesos: {}, estado: null }, 'nada pendiente');
+  assert.equal(n.cursor, 9);
+  assert.deepEqual(Object.keys(S.dias).sort(), ['2026-11-23', '2026-11-24']); assert.deepEqual(S.metas['2026-11-23'], META_N);
+  assert.deepEqual(S.pesos, [{ f: '2026-11-20', kg: 77.5 }, { f: '2026-11-24', kg: 76.9 }], 'los pesos, ordenados; el borrado no aparece');
+  assert.equal(Core.detectaCambios(S, n, 2000, '2025-10-20'), 0, 'y el móvil queda igual que la cuenta');
+  // ahora llegan de otro móvil los ajustes, un día vaciado y un peso borrado
+  const c2 = Core.aplicaRespuesta(S, n, { dias: {}, pesos: {}, estado: null }, respN({ cursor: 12, estado: { datos: otroEstado, mod: 1500 },
+    dias: [{ d: '2026-11-24', comidas: [], meta: null, mod: 1500 }], pesos: [{ d: '2026-11-24', kg: null, mod: 1500 }] }), '2025-10-20');
+  assert.deepEqual(c2, { dias: true, pesos: true, estado: true });
+  assert.equal(S.dias['2026-11-24'], undefined); assert.equal(S.metas['2026-11-24'], undefined);
+  assert.deepEqual(S.pesos, [{ f: '2026-11-20', kg: 77.5 }]);
+  assert.deepEqual([S.perfil, S.meta, S.favs, S.propios, S.platos], [otroEstado.perfil, otroEstado.meta, otroEstado.favs, otroEstado.propios, otroEstado.platos]);
+  assert.equal(Core.detectaCambios(S, n, 3000, '2025-10-20'), 0);
+});
+
+test('respuesta: si el servidor rechaza lo mío por viejo, me quedo con lo suyo; si cambié otra vez mientras tanto, lo mío sigue pendiente', () => {
+  const S = estadoN({ dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500)], '2026-11-23': [comidaN('Cena', '21:00', 600)] } }), n = nubeN();
+  n.base.estado = Core.huella(Core.estadoNube(S));
+  Core.detectaCambios(S, n, 1000, '2025-10-20');
+  const s = Core.loQueSube(S, n, 60);
+  S.dias['2026-11-23'].push(comidaN('Recena', '23:30', 200));           // cambio mientras la llamada va y viene
+  Core.detectaCambios(S, n, 1200, '2025-10-20');
+  const cambia = Core.aplicaRespuesta(S, n, s.enviado, respN({ cursor: 20, rechazadas: { dias: ['2026-11-24'], pesos: [], estado: false },
+    dias: [{ d: '2026-11-24', comidas: [comidaN('Desayuno del otro móvil', '9:00', 450)], meta: META_N, mod: 1100 }] }), '2025-10-20');
+  assert.deepEqual(cambia, { dias: true, pesos: false, estado: false });
+  assert.equal(S.dias['2026-11-24'][0].nombre, 'Desayuno del otro móvil', 'lo rechazado se cambia por lo del servidor');
+  assert.equal(n.pend.dias['2026-11-24'], undefined);
+  assert.equal(S.dias['2026-11-23'].length, 2, 'lo que cambié mientras tanto no se pisa');
+  assert.equal(n.pend.dias['2026-11-23'].m, 1200, 'y sigue pendiente para la próxima');
+  // llega de otro móvil un día que aquí tiene un cambio más reciente sin subir: gana el de aquí
+  S.dias['2026-11-22'] = [comidaN('Comida', '14:00', 700)]; Core.detectaCambios(S, n, 5000, '2025-10-20');
+  Core.aplicaRespuesta(S, n, { dias: {}, pesos: {}, estado: null }, respN({ cursor: 30, dias: [{ d: '2026-11-22', comidas: [comidaN('Otra', '13:00', 300)], meta: null, mod: 4000 }] }), '2025-10-20');
+  assert.equal(S.dias['2026-11-22'][0].nombre, 'Comida'); assert.equal(n.pend.dias['2026-11-22'].m, 5000);
+  // …y si lo de fuera es más reciente que lo de aquí, gana lo de fuera
+  Core.aplicaRespuesta(S, n, { dias: {}, pesos: {}, estado: null }, respN({ cursor: 31, dias: [{ d: '2026-11-22', comidas: [comidaN('La última', '13:00', 300)], meta: null, mod: 6000 }] }), '2025-10-20');
+  assert.equal(S.dias['2026-11-22'][0].nombre, 'La última'); assert.equal(n.pend.dias['2026-11-22'], undefined);
+});
+
+test('la primera vez en una cuenta que ya tiene datos: se junta todo y no se pierde nada', () => {
+  const propioA = { id: 'P1', n: 'Bizcocho de casa' }, propioB = { id: 'P2', n: 'Batido' };
+  const S = estadoN({ perfil: { sexo: 'h', edad: 30, peso: 75, altura: 178, nivel: 3, ejemplo: true }, favs: ['U1', 'U2'], propios: [propioA], platos: [{ nombre: 'Mi cena', items: [{ id: 'U1', gramos: 100 }] }],
+    dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500), comidaN('Comida', '14:00', 700)], '2026-11-22': [comidaN('Cena', '21:00', 600)] }, metas: { '2026-11-24': META_N },
+    pesos: [{ f: '2026-11-24', kg: 76.9 }, { f: '2026-11-10', kg: 77.5 }] });
+  const cuenta = { perfil: { sexo: 'h', edad: 31, peso: 76, altura: 183, nivel: 4, ejemplo: false }, meta: { modo: 'mano', tipo: null, comidas: 5, mano: { p: 180, h: 250, g: 70 } }, favs: ['U2', 'U3'], propios: [propioB], platos: [{ nombre: 'Mi cena', items: [{ id: 'U1', gramos: 100 }] }, { nombre: 'Desayuno fijo', items: [] }] };
+  const n = nubeN();
+  Core.fusionInicial(S, n, respN({ cursor: 40, estado: { datos: cuenta, mod: 500 },
+    dias: [{ d: '2026-11-24', comidas: [comidaN('Comida', '14:00', 700), comidaN('Merienda', '18:00', 300)], meta: { kcal: 2500, p: 180, h: 250, g: 70 }, mod: 500 },
+           { d: '2026-11-20', comidas: [comidaN('Comida', '14:00', 650)], meta: META_N, mod: 500 }],
+    pesos: [{ d: '2026-11-24', kg: 76.5, mod: 500 }, { d: '2026-11-17', kg: 77.1, mod: 500 }] }), '2025-10-20');
+  assert.deepEqual(S.dias['2026-11-24'].map((c) => c.nombre), ['Desayuno', 'Comida', 'Merienda'], 'el mismo día: las comidas de los dos lados, las repetidas una vez y por su hora');
+  assert.deepEqual(S.metas['2026-11-24'], { kcal: 2500, p: 180, h: 250, g: 70 }, 'el objetivo del día, el de la cuenta');
+  assert.deepEqual(Object.keys(S.dias).sort(), ['2026-11-20', '2026-11-22', '2026-11-24']);
+  assert.deepEqual(S.pesos, [{ f: '2026-11-10', kg: 77.5 }, { f: '2026-11-17', kg: 77.1 }, { f: '2026-11-24', kg: 76.5 }], 'los pesos de los dos; el mismo día, el de la cuenta');
+  assert.deepEqual([S.perfil, S.meta], [cuenta.perfil, cuenta.meta], 'perfil y objetivo, los de la cuenta');
+  assert.deepEqual(S.favs.slice().sort(), ['U1', 'U2', 'U3']);
+  assert.deepEqual(S.propios.map((a) => a.id).sort(), ['P1', 'P2']);
+  assert.deepEqual(S.platos.map((p) => p.nombre).sort(), ['Desayuno fijo', 'Mi cena'], 'los platos de los dos, sin repetir el que es igual');
+  assert.equal(n.cursor, 40);
+  // lo que el móvil aporta de más queda pendiente de subir; lo que ya es igual que la cuenta, no
+  Core.detectaCambios(S, n, 1000, '2025-10-20');
+  assert.deepEqual(Object.keys(n.pend.dias).sort(), ['2026-11-22', '2026-11-24']); assert.deepEqual(Object.keys(n.pend.pesos), ['2026-11-10']); assert.ok(n.pend.estado, 'los ajustes juntados también suben');
+});
+
+test('la primera vez en una cuenta vacía: lo del móvil se queda tal cual y sube entero', () => {
+  const S = estadoN({ dias: { '2026-11-24': [comidaN('Desayuno', '8:10', 500)] }, metas: { '2026-11-24': META_N }, pesos: [{ f: '2026-11-24', kg: 76.9 }] }), antes = JSON.stringify(S), n = nubeN();
+  Core.fusionInicial(S, n, respN({ cursor: 0 }), '2025-10-20');
+  assert.equal(JSON.stringify(S), antes);
+  assert.equal(Core.detectaCambios(S, n, 1000, '2025-10-20'), 3);
+});
+
+test('la primera vez con el móvil recién estrenado: se queda con lo de la cuenta y no sube nada', () => {
+  const S = estadoN({ perfil: { sexo: 'h', edad: 30, peso: 75, altura: 178, nivel: 3, ejemplo: true } }), n = nubeN();
+  const cuenta = { perfil: { sexo: 'm', edad: 28, peso: 60, altura: 165, nivel: 2, ejemplo: false }, meta: { modo: 'mano', tipo: null, comidas: 3, mano: { p: 120, h: 180, g: 50 } }, favs: ['U3'], propios: [], platos: [] };
+  Core.fusionInicial(S, n, respN({ cursor: 7, estado: { datos: cuenta, mod: 500 }, dias: [{ d: '2026-11-23', comidas: [comidaN('Cena', '21:00', 600)], meta: META_N, mod: 500 }], pesos: [{ d: '2026-11-23', kg: 60.2, mod: 500 }] }), '2025-10-20');
+  assert.equal(Core.detectaCambios(S, n, 1000, '2025-10-20'), 0, 'nada que subir');
+  assert.deepEqual([S.perfil, S.favs, Object.keys(S.dias), S.pesos], [cuenta.perfil, ['U3'], ['2026-11-23'], [{ f: '2026-11-23', kg: 60.2 }]]);
+});
+
+test('el código de invitación se va ordenando mientras se escribe', () => {
+  assert.equal(Core.codigoBonito('K7MP2XWD9RTN'), 'k7mp-2xwd-9rtn');
+  assert.equal(Core.codigoBonito(' k7mp 2xwd-9r'), 'k7mp-2xwd-9r');
+  assert.equal(Core.codigoBonito('k7mp'), 'k7mp');
+  assert.equal(Core.codigoBonito('k7mp2'), 'k7mp-2');
+  assert.equal(Core.codigoBonito('k7mp-2xwd-9rtn-sobra'), 'k7mp-2xwd-9rtn');
+  assert.equal(Core.codigoBonito(''), ''); assert.equal(Core.codigoBonito(null), '');
+});

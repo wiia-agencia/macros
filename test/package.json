@@ -1,0 +1,8 @@
+{
+  "name": "macros-pruebas",
+  "private": true,
+  "description": "Lo que hace falta para probar la parte de usuarios sin tocar la base de datos de verdad: un Postgres dentro de Node.",
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.14"
+  }
+}

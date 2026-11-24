@@ -1,7 +1,7 @@
 /* Macros · service worker: guarda la app en el móvil para abrirla sin conexión.
    La página se pide siempre primero a la red (así un cambio llega a la primera); si no hay red, o tarda, sale la guardada.
    No guarda nada de lo que apuntas: eso vive en el almacenamiento del navegador. */
-const VERSION = 'ccce50b03f39';
+const VERSION = 'bc9eb7a96367';
 const CACHE = 'macros-' + VERSION;
 const FIJOS = ['/', '/manifest.webmanifest', '/icono.svg', '/icono-180.png', '/icono-192.png', '/icono-512.png', '/icono-maskable-512.png'];
 const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));

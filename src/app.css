@@ -388,3 +388,44 @@ details.como a, .prosa a { color: var(--tinta); font-weight: 600; text-underline
   .metas { grid-template-columns: 1fr; } .fila { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 9px; } .mini { width: 40px; height: 40px; } .mini > span { width: 30px; height: 30px; font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ── La cuenta ─────────────────────────────────────────────────────────────────────────
+   La pantalla de entrada tapa la app hasta que se entra con el código y el PIN. */
+.entrada { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; gap: 14px; background: var(--fondo); overflow-y: auto;
+  padding: max(56px, calc(env(safe-area-inset-top) + 28px)) 24px calc(22px + env(safe-area-inset-bottom)); }
+.entrada[hidden] { display: none; }
+.en-caja { display: grid; gap: 12px; }
+.en-caja > svg { width: 72px; height: 72px; margin-bottom: 14px; filter: drop-shadow(0 6px 14px rgb(var(--sombra) / .16)); }
+.en-disco { fill: var(--hoja); }
+.en-caja h1 { font: 700 30px/1.1 var(--titulo); letter-spacing: -.02em; color: var(--tinta); }
+.en-sub { font-size: 15px; line-height: 1.4; color: var(--tinta-2); min-height: 2.8em; }
+.en-campo { display: grid; gap: 4px; background: var(--hoja); border-radius: 18px; padding: 11px 14px 12px; margin-top: 6px; box-shadow: 0 1px 3px rgb(var(--sombra) / .08); }
+.en-campo:focus-within { box-shadow: 0 0 0 2px var(--tinta); }
+.en-campo span { font-size: 12.5px; font-weight: 600; color: var(--tinta-2); }
+.en-campo input { border: 0; background: none; outline: none; width: 100%; color: var(--tinta); font: 700 21px/1.2 var(--texto); letter-spacing: .02em; }
+.en-campo input::placeholder { color: var(--tinta-3); font-weight: 500; }
+.entrada .btn:disabled { opacity: .45; }
+.en-aviso { min-height: 1.45em; font-size: 14px; font-weight: 600; line-height: 1.45; color: var(--aviso-tinta); }
+.en-puntos { display: flex; justify-content: center; gap: 16px; margin: 18px 0 4px; }
+.en-puntos i { width: 15px; height: 15px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--tinta-3); }
+.en-puntos i.on { background: var(--tinta); box-shadow: none; }
+.en-teclas { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.en-teclas button { height: 58px; border-radius: 16px; background: var(--hoja); color: var(--tinta); font: 700 23px/1 var(--titulo); display: grid; place-items: center;
+  box-shadow: 0 2px 0 rgb(var(--sombra) / .1), 0 1px 4px rgb(var(--sombra) / .08); }
+.en-teclas button:active { transform: translateY(1px); box-shadow: none; }
+.en-teclas button[data-a="en-borra"] { background: none; box-shadow: none; color: var(--tinta-2); }
+.en-teclas.ocupado { opacity: .5; pointer-events: none; }
+.en-enlace { align-self: center; justify-self: center; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--tinta-2); text-decoration: underline; text-underline-offset: 3px; }
+.en-pie { margin-top: auto; text-align: center; font-size: 13px; color: var(--tinta-3); }
+/* «Tu cuenta» y, para el administrador, «Usuarios» */
+.btn-pila { display: grid; gap: 10px; margin-top: 14px; }
+.cu-nombre { font: 700 24px/1.15 var(--titulo); margin: 0 2px 2px; }
+.us-lista { margin-top: 8px; }
+.us-fila { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 11px 2px; border-top: 1px solid var(--linea); }
+.us-lista .us-fila:first-child { border-top: 0; }
+.us-inicial { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--tinta); color: var(--hoja); font: 700 17px/1 var(--titulo); }
+.us-inicial.gris { background: var(--hundido); color: var(--tinta-2); }
+.us-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.us-nombre { font-weight: 700; } .us-sub { font-size: 12.5px; color: var(--tinta-2); }
+.us-pildora { flex: none; font-size: 12px; font-weight: 700; color: var(--tinta-2); background: var(--hundido); border-radius: 99px; padding: 6px 10px; }
+.us-enlace { background: var(--hundido); border-radius: 14px; padding: 12px 14px; margin-top: 10px; font: 600 14.5px/1.4 var(--texto); word-break: break-all; -webkit-user-select: all; user-select: all; }
