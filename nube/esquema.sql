@@ -402,9 +402,11 @@ revoke all on all tables in schema ag from public, anon, authenticated;
 revoke all on all sequences in schema ag from public, anon, authenticated;
 revoke all on all functions in schema ag from public, anon, authenticated;
 
+-- La app llama siempre con la clave pública (papel «anon»): solo ese papel puede llamar a las funciones. Quién es cada
+-- uno lo dice la sesión que viaja en cada llamada, no el papel.
 revoke all on function public.ag_mirar(text), public.ag_crear_pin(text, text), public.ag_entrar(text, text), public.ag_salir(text),
   public.ag_sinc(text, bigint, jsonb), public.ag_admin_usuarios(text), public.ag_admin_invitar(text, text),
-  public.ag_admin_activar(text, uuid, boolean), public.ag_admin_enlace(text, uuid) from public;
+  public.ag_admin_activar(text, uuid, boolean), public.ag_admin_enlace(text, uuid) from public, authenticated;
 grant execute on function public.ag_mirar(text), public.ag_crear_pin(text, text), public.ag_entrar(text, text), public.ag_salir(text),
   public.ag_sinc(text, bigint, jsonb), public.ag_admin_usuarios(text), public.ag_admin_invitar(text, text),
-  public.ag_admin_activar(text, uuid, boolean), public.ag_admin_enlace(text, uuid) to anon, authenticated;
+  public.ag_admin_activar(text, uuid, boolean), public.ag_admin_enlace(text, uuid) to anon;

@@ -3,7 +3,8 @@
 Calculadora de macros para móvil: biblioteca de alimentos, plato en los dos sentidos
 (gramos → macros y macros → gramos), objetivos diarios (definir, mantener, ganar) y «Hoy»,
 donde se apuntan las comidas del día y se ve lo que llevas, lo que te queda y cómo fueron los días anteriores.
-Se instala en el móvil como una app y funciona sin conexión. Todo lo que apuntas se queda en tu móvil.
+Se instala en el móvil como una app y funciona sin conexión. Se entra con un código de invitación y un PIN: lo que
+apuntas se guarda en tu cuenta (y en tu móvil) y solo lo ves tú.
 
 ## Cómo está montada
 - `src/core.js` — cálculos puros (macros, calculadora inversa y su veredicto, objetivos, búsqueda, cuentas del día). Sin pantalla.
@@ -12,8 +13,11 @@ Se instala en el móvil como una app y funciona sin conexión. Todo lo que apunt
 - `src/index.tpl.html` — esqueleto. `build.py` lo junta todo en una sola página, sin peticiones externas, en dos versiones:
   `public/` (la web que se publica: instalable, con manifiesto, iconos y service worker) y `dist/index.html` (la misma
   página sin eso, para abrirla dentro de Claude).
+- `src/nube.js` — la cuenta: entrar y mantener iguales el móvil y el servidor. `nube/esquema.sql` — la base de datos de
+  usuarios (Supabase); `nube/config.json` — su dirección y su clave pública.
 - `src/web/` — el manifiesto y el service worker. `src/iconos/` — el icono y `hacer.js`, que saca sus tamaños.
-- `vercel.json` — cómo se sirve: sin indexar y con una política de seguridad que solo deja hablar con su propio servidor.
+- `vercel.json` — cómo se sirve: sin indexar y con una política de seguridad que solo le deja hablar con su propio
+  servidor y con el de las cuentas.
 - `data/alimentos.txt` — la lista curada: categoría, nombre, estado, icono, sinónimos y de qué registro sale.
 - `data/curar.py` → cruza esa lista con USDA SR Legacy y CIQUAL 2017 (sacadas del paquete de R `NutrienTrackeR`,
   github.com/cran/NutrienTrackeR, `data/food_composition_data.rda`) y saca `alimentos_raw.json`.
@@ -69,6 +73,29 @@ primero («2,9 kg menos en 8 semanas»), una línea con los últimos 30 y la lis
 cálculo de los macros, y cambiarlo en tus datos también lo apunta. La línea abarca 2 kg como poco, para que dos
 décimas no parezcan una caída.
 
+## Usuarios
+Sin invitación no se entra: la web pide el **código** (12 letras y números, `k7mp-2xwd-9rtn`) y, la primera vez, crear
+un **PIN de 4 números**. El móvil se queda dentro; el PIN solo se vuelve a pedir desde otro móvil. Sin correo ni
+contraseña. El enlace de invitación lleva el código detrás de `#c=`, la parte de la dirección que no viaja a ningún
+servidor; la app lo lee y lo quita.
+- **Qué se guarda en la cuenta**: cada día (sus comidas y su objetivo), cada peso y los ajustes (perfil, objetivo,
+  favoritos, alimentos y platos propios). El aspecto y el plato a medias son de cada móvil.
+- **Cómo se sincroniza** (`Core.detectaCambios`, `loQueSube`, `aplicaRespuesta`): fila a fila, gana el cambio más
+  reciente. La app funciona igual sin conexión: apunta la hora de cada cambio y lo sube al volver. Los días de hace más
+  de 400 días no se guardan en el móvil, pero en la cuenta se quedan.
+- **La primera vez en una cuenta** (`Core.fusionInicial`): lo que ya había en el móvil se junta con lo de la cuenta sin
+  perder nada (días de un solo lado, se quedan; el mismo día en los dos, se juntan sus comidas).
+- **Cerrar sesión** sube antes lo pendiente (si no puede, no cierra) y deja el móvil limpio. Un móvil con los datos de
+  una cuenta no deja entrar a otra sin cerrar antes: nada se mezcla.
+- **El administrador** («Tu cuenta» → «Usuarios») ve quién la usa, cuándo entró por última vez y cuántos de los últimos
+  7 días apuntó; puede invitar (un nombre → un enlace que vale 7 días), desactivar (fuera al momento, los datos se
+  quedan) y dar un enlace nuevo (el viejo deja de valer y hay que crear PIN otra vez). No ve comidas ni pesos.
+- **La base de datos** (`nube/esquema.sql`): todo en el esquema `ag`, que la API de Supabase no publica; la app solo
+  puede llamar a las funciones `public.ag_*`, que comprueban la sesión antes de tocar nada. Código, PIN y sesión se
+  guardan solo como huella (SHA-256). Al quinto PIN mal, 15 minutos de bloqueo; cada fallo de más lo dobla, hasta un día.
+  Quien administra el proyecto de Supabase puede ver las tablas desde su panel: la app no se lo enseña a nadie.
+- La versión que se abre dentro de Claude (`dist/`) no lleva nada de esto: allí la app es solo del móvil.
+
 ## De dónde sale cada cosa
 - **Datos de los alimentos**: USDA FoodData Central, edición SR Legacy (dominio público) y tabla CIQUAL 2017 de la
   Anses (Francia, licencia abierta Etalab). La ficha de cada alimento dice de cuál sale y con qué código.
@@ -82,7 +109,8 @@ décimas no parezcan una caída.
 - No se usa BEDCA: sus condiciones piden permiso para usos que no sean personales.
 
 ## Probar y montar
-    ./probar.sh                       # monta la app y pasa todo: 88 pruebas de cálculo y las 6 de pantalla
+    (cd test && npm install)          # una vez: el Postgres que corre dentro de Node para probar los usuarios
+    ./probar.sh                       # monta la app y pasa todo: 124 pruebas (cálculo, base de datos, cuenta) y 7 de pantalla
 Por separado:
 
     python3 build.py                  # genera public/ (la web) y dist/index.html (para Claude)
@@ -93,14 +121,22 @@ Por separado:
     node test/peso.js                 # apuntar el peso, el cambio, la gráfica y la lista
     node test/arranque.js             # quien venía de la versión anterior no pierde nada; el plato de ejemplo
     node test/instalable.js           # manifiesto, iconos, cabeceras, abrir sin conexión y recibir una versión nueva
+    node --test test/nube.test.js     # la base de datos: entrar, bloqueo, caducidad, sincronizar, aislamiento, administrador
+    node --test test/nube-cliente.test.js   # el módulo de la cuenta, parando respuestas y cortando la conexión
+    node test/usuarios.js             # usuarios de punta a punta en pantalla: dos móviles, sin conexión, administrador
+    node test/fotos-usuarios.js       # capturas de la entrada, la cuenta y el panel (u-*.png)
     node test/fotos-guiado.js         # capturas del día guiado (g-*.png)
     node test/fotos-historial.js      # capturas del tamaño, el historial y el peso, con un mes de datos
     python3 test/laminas.py           # monta láminas con esas capturas
 Las pruebas de pantalla necesitan Node, Playwright y Chrome, y abren la app como la sirve Vercel (`test/servidor.js`:
-la carpeta `public/` con las cabeceras de `vercel.json`). Con `file://`, el Chrome sin ventana devuelve a veces el
+la carpeta `public/` con las cabeceras de `vercel.json`). Los usuarios se prueban contra `test/nube.js`: un Postgres 17
+dentro de Node (PGlite) con el mismo `nube/esquema.sql` que la base de datos real, llamado como lo llama la app (papel
+`anon`). Las demás pruebas abren la app sin cuenta, como la versión de Claude. Con `file://`, el Chrome sin ventana devuelve a veces el
 almacenamiento vacío al recargar si la máquina va cargada (3–5 de cada 100 recargas; por HTTP, 0 de 200).
 
 ## Publicar
+La base de datos: `nube/esquema.sql` se pasa entero al proyecto de Supabase (no borra nada y se puede repetir). Si
+cambia de proyecto, hay que cambiar `nube/config.json` y la dirección que deja pasar `vercel.json` (`connect-src`).
 Vercel publica la carpeta `public/` cada vez que se sube un cambio a `main`; no compila nada. Por eso `public/` va en
 el repositorio: **antes de subir, `./probar.sh`** (la vuelve a generar y la prueba).
 - El service worker pide siempre la página a la red primero: un cambio llega a la primera vez que se abre con conexión.

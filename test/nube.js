@@ -22,9 +22,10 @@ module.exports = async function nube() {
   });
   /** SQL como dueño de la base de datos (para preparar datos y mirar por dentro). */
   const sql = (q, p) => enCola(() => db.query(q, p));
-  /** SQL con el papel «anon», como alguien que solo tiene la clave pública. */
-  const anon = (q, p) => enCola(async () => { await db.exec('set role anon'); try { return await db.query(q, p); } finally { await db.exec('reset role'); } });
+  /** SQL con otro papel: «anon» es quien solo tiene la clave pública; «authenticated», quien ha entrado en otra app del mismo proyecto. */
+  const como = (papel, q, p) => enCola(async () => { await db.exec('set role ' + papel); try { return await db.query(q, p); } finally { await db.exec('reset role'); } });
+  const anon = (q, p) => como('anon', q, p);
   /** Da de alta a alguien (como hace el administrador al invitar) y devuelve su código. */
   const alta = async (nombre, admin) => (await sql('select ag.alta($1, $2) as c', [nombre, !!admin])).rows[0].c;
-  return { rpc, sql, anon, alta, cierra: () => db.close() };
+  return { rpc, sql, anon, como, alta, cierra: () => db.close() };
 };

@@ -1,5 +1,5 @@
 """Monta láminas con las capturas reales (carpeta capturas/): varias pantallas en fila, cada una con su título y su pie.
-Antes hay que sacar las capturas:  node test/fotos-guiado.js  y  node test/fotos-historial.js
+Antes hay que sacar las capturas:  node test/fotos-guiado.js, node test/fotos-historial.js y node test/fotos-usuarios.js
 Si falta alguna captura, esa lámina se salta."""
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import os
@@ -45,3 +45,9 @@ lamina([{'titulo': '1. Los últimos 7 días', 'img': 'h-1-hoy', 'pie': 'Negro: c
 lamina([{'titulo': 'En «Mis macros»', 'img': 'w-1-mis-macros', 'pie': 'Una fila con tu último peso\ny cómo va.'},
         {'titulo': 'Mi peso', 'img': 'w-2-mi-peso', 'pie': 'Lo apuntas cuando quieras: ves\nla línea, el cambio y la lista.'},
         {'titulo': 'En oscuro', 'img': 'w-2-mi-peso-osc', 'pie': 'Todo lo nuevo sigue el aspecto\nque tengas puesto.'}], 'macros-peso')
+
+# Usuarios: entrar, la cuenta y el panel del administrador (test/fotos-usuarios.js)
+lamina([{'titulo': '1. Abre su enlace', 'img': 'u-1-codigo', 'pie': 'El enlace ya trae el código.\nSin correo ni contraseña.'},
+        {'titulo': '2. Crea su PIN', 'img': 'u-2-crear-pin', 'pie': 'Cuatro números, dos veces.\nEl móvil se queda dentro.'},
+        {'titulo': '3. Tú ves quién la usa', 'img': 'u-7-usuarios', 'pie': 'Última vez y días apuntados.\nNada de lo que comen ni pesan.'},
+        {'titulo': '4. Invitas con un enlace', 'img': 'u-9-enlace', 'pie': 'Pones un nombre y sale el enlace.\nVale 7 días y es para una persona.'}], 'macros-usuarios')

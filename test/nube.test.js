@@ -102,6 +102,7 @@ test('con la clave pública no se llega a las tablas ni a las funciones de dentr
   const n = await conUsuario('Abel');
   for (const q of ['select * from ag.usuarios', 'select * from ag.sesiones', 'select * from ag.dias', 'select * from ag.pesos', 'select * from ag.estado', `select ag.alta('Yo', true)`, `select nextval('ag.sec')`])
     await assert.rejects(n.anon(q), /permission denied/, q);
+  await assert.rejects(n.como('authenticated', `select public.ag_mirar('x')`), /permission denied/, 'las funciones solo las llama la clave pública');
   await assert.rejects(n.rpc('ag_no_existe', {}), /does not exist/);
   await assert.rejects(n.rpc('pg_sleep', {}), /desconocida/, 'la nube de pruebas solo deja llamar a las funciones ag_');
 });

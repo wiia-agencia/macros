@@ -51,7 +51,10 @@ const comida = (nombre, hora, p, h, g) => ({ nombre, hora, items: [{ id: 'U11367
     await toca(p, '#sheet [data-a="cu-usuarios"]'); await p.waitForTimeout(500);
     if (esquema === 'light') {
       await toca(p, '#sheet [data-a="us-invitar"]'); await p.fill('#us-nombre', 'Dani'); await foto(p, 'u-8-invitar');
-      await toca(p, '#sheet [data-a="us-crear"]'); await p.waitForTimeout(500); await foto(p, 'u-9-enlace');
+      await toca(p, '#sheet [data-a="us-crear"]'); await p.waitForTimeout(500);
+      // en la captura, la dirección de la web publicada en vez de la del servidor de pruebas (el código es de esta nube de pruebas)
+      await p.evaluate(() => { const e = document.querySelector('#us-enlace'); e.textContent = e.textContent.replace(location.origin, 'https://macros-wiia.vercel.app'); });
+      await foto(p, 'u-9-enlace');
       await toca(p, '#sheet [data-a="us-volver"]'); await p.waitForTimeout(500);
     }
     await foto(p, 'u-7-usuarios' + s);
